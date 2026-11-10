@@ -36,13 +36,14 @@ BHAV = "https://archives.nseindia.com/content/historical/EQUITIES/{y}/{mon}/cm{d
 HEADERS = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Chrome/120 Safari/537.36", "Accept": "application/json"}
 INDICES = {"NIFTY": "NSE_INDEX|Nifty 50", "BANKNIFTY": "NSE_INDEX|Nifty Bank", "INDIAVIX": "NSE_INDEX|India VIX"}
 COLS = ["ts", "open", "high", "low", "close", "volume"]
+DEFAULT_INTRADAY_LOCK = "2024-12-31"   # used when the lock file is missing (data/ is not in git)
 
 
 def intraday_lock(root=None) -> pd.Timestamp | None:
     if os.environ.get("QUANT_UNLOCK_INTRADAY") == "1":
         return None
     f = data_root(root) / "INTRADAY_LOCK"
-    return pd.Timestamp(f.read_text().strip()) if f.exists() else None
+    return pd.Timestamp(f.read_text().strip() if f.exists() else DEFAULT_INTRADAY_LOCK)
 
 
 def _dir(root=None) -> Path:

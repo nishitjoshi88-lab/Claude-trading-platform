@@ -30,6 +30,7 @@ from pathlib import Path
 
 import pandas as pd
 
+DEFAULT_LOCK = "2021-12-31"        # used when the LOCK file is missing (data/ is not in git)
 CM_FIELDS = ("open", "high", "low", "close", "volume", "turnover", "factor", "eq")
 
 
@@ -44,7 +45,7 @@ def lock_date(root: str | Path | None = None) -> pd.Timestamp | None:
     if os.environ.get("QUANT_UNLOCK_HOLDOUT") == "1":
         return None
     f = data_root(root) / "LOCK"
-    return pd.Timestamp(f.read_text().strip()) if f.exists() else None
+    return pd.Timestamp(f.read_text().strip() if f.exists() else DEFAULT_LOCK)
 
 
 def _clip(df: pd.DataFrame, start, end, root) -> pd.DataFrame:
