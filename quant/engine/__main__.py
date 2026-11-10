@@ -40,7 +40,7 @@ def board(family: str | None = None, top: int = 50) -> list[dict]:
         if not c or (family and r["family"] != family):
             continue
         v, t = c["valid"], c["train"]
-        rows.append({"id": r["id"], "family": r["family"], "mode": c.get("mode"), "trials": r["n_trials"],
+        rows.append({"id": r["id"], "family": r["family"], "mode": r.get("kind", c.get("mode")), "trials": r["n_trials"],
                      "train_sharpe": t.get("sharpe"), "valid_sharpe": v.get("sharpe"),
                      "valid_cagr": v.get("cagr"), "valid_dd": v.get("max_drawdown"),
                      "valid_cost": v.get("cost_per_year"), "valid_pos_months": v.get("positive_months"),
@@ -85,7 +85,7 @@ def main(argv=None) -> None:
             print(f"{s.family:<20}{s.id:<50}{len(s.trials()):>3} trials")
     elif a.cmd == "check":
         spec = reg[a.id]
-        problems = harness.check_lookahead(spec, harness.load_ctx(spec.subset))
+        problems = harness.run_lookahead(spec, harness.default_ctx(spec))
         print("PASS" if not problems else "\n".join(problems))
     else:
         ids = a.ids or [s.id for s in reg.values() if a.all or s.family == a.family]

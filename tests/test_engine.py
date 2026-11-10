@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 
 from quant.engine import CostModel, Ctx, Plan, SimConfig, Spec, check_lookahead, simulate
+from quant.engine import harness
 from quant.engine.harness import evaluate
 from quant.engine.metrics import deflated_sharpe, expected_max_sharpe, probabilistic_sharpe, stats
 from quant.engine.testing import make_market, synthetic_market
@@ -249,7 +250,7 @@ def test_lookahead_check_catches_a_cheat_and_passes_honest_code():
 def test_evaluate_picks_parameters_on_train_only(monkeypatch):
     m = synthetic_market(days=900, symbols=12, start="2012-01-02")
     ctx = Ctx(m)
-    monkeypatch.setattr("quant.engine.harness.WINDOWS",
+    monkeypatch.setitem(harness.WINDOWS, "daily",
                         {"train": ("2012-06-01", "2013-12-31"), "valid": ("2014-01-01", "2015-06-01")})
 
     def mom(ctx, n=20, top=3):

@@ -1,0 +1,815 @@
+[
+  {
+    "id": "small_account_india__nifty200_momentum30_index",
+    "name": "Nifty200 Momentum 30 index rules (ETF or DIY)",
+    "family": "cross-sectional momentum (factor index)",
+    "rule": "Each June and December, among Nifty 200 stocks listed 1+ year and in F&O: MR6 = 6-month return / 1-year annualised daily volatility; MR12 likewise with 12-month return. Z-score both cross-sectionally; Z = 0.5*Z6 + 0.5*Z12; score = 1+Z if Z>=0 else 1/(1-Z). Hold top 30; weight = free-float cap x score, capped at min(5%, 5x free-float weight). Or hold a Nifty200 Momentum 30 ETF.",
+    "params": {
+      "return_lookbacks_months": [
+        6,
+        12
+      ],
+      "vol_window_days": 252,
+      "z_weights": [
+        0.5,
+        0.5
+      ],
+      "n_holdings": 30,
+      "weight_cap": 0.05,
+      "rebalance": "semi-annual (Jun, Dec)",
+      "rank_buffer": "applied by NSE, values not verified"
+    },
+    "instruments": "Nifty200 Momentum 30 ETF or index fund; or Nifty 200 constituent stocks",
+    "holding_period": "6 months between rebalances",
+    "data_needed": [
+      "daily_index",
+      "daily_equity",
+      "other"
+    ],
+    "evidence": "strong_academic",
+    "india_evidence": true,
+    "reported_performance": "NSE price index Apr 2005 to 27 Feb 2026 (back-tested before Aug 2020 launch): 19.19% p.a. vs Nifty 200 15.08%; max drawdown 68% vs 64%; calendar 2025 -4.57% (14.13 points behind Nifty 200); fell 31.8% from 27 Sep 2024 to 7 Apr 2025.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "One ETF order (about Rs 106 per full round trip at Rs 1.5 lakh, no per-stock DP charges, churn untaxed inside the fund). DIY with 30 stocks at Rs 5,000 each is marginal: about 0.93% per round trip plus whole-share rounding.",
+    "sources": [
+      "https://www.niftyindices.com/docs/default-source/indices/nifty200-momentum-30/momentum-strategy-whitepaper_2026.pdf",
+      "https://www.niftyindices.com/docs/default-source/indices/nifty200-momentum-30/nifty200_momentum_30_index_whitepaper_sep_20.pdf",
+      "https://freefincal.com/nifty200-momentum-30-index-a-new-strategy-index-from-the-nse/",
+      "https://primeinvestor.in/reports/pros-and-cons-of-momentum-investing/",
+      "https://www.wrightresearch.in/blog/momentum-strategies-underperforming-2025-data-insights/",
+      "https://www.business-standard.com/amp/markets/news/nifty200-momentum30-a-flip-of-index-switch-jolts-16k-cr-across-the-grid-125121400388_1.html"
+    ]
+  },
+  {
+    "id": "small_account_india__capitalmind_naive_momentum_top30",
+    "name": "Capitalmind naive momentum: top 30 by 12-month return, monthly",
+    "family": "cross-sectional momentum (stocks)",
+    "rule": "First trading day of each month: rank all liquid NSE stocks (include delisted names) by 252-day price return. Buy the top N equal weight; sell names that drop out; repeat monthly. Ranking variants: (share of up days in 252 days) x (252-day return), or 252-day excess return divided by annualised daily volatility. Long only, no stops, no cash rule.",
+    "params": {
+      "lookback_days": 252,
+      "n_holdings": 30,
+      "rebalance": "monthly",
+      "rank_metric": "return | gain_loss | sharpe",
+      "min_daily_traded_value_inr": 10000000
+    },
+    "instruments": "NSE cash equities",
+    "holding_period": "1 month re-rank; names typically last 2 to 6 months",
+    "data_needed": [
+      "daily_equity"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "Backtest Jan 2007 to 2019, no costs or tax: simple 12.6% p.a., gain-loss 14.7%, volatility-adjusted 16.8% vs Nifty 8.9% and Nifty 500 8.7%; beat the indices in 6 of 13 years; deeper drawdown than the index in 2008. Jan 2000 to May 2020: Rs 100 to Rs 1,038 after tax vs Nifty Rs 602 (as quoted by PrimeInvestor).",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "30 names at Rs 5,000 cost about 0.93% per round trip and are re-ranked monthly. Workable only with 10 to 15 names and a rank buffer; every gain is taxed at 20% STCG.",
+    "sources": [
+      "https://www.capitalmind.in/insights/momentum-investing-basics-india",
+      "https://primeinvestor.in/reports/pros-and-cons-of-momentum-investing/"
+    ]
+  },
+  {
+    "id": "small_account_india__capitalmind_adaptive_momentum",
+    "name": "Capitalmind-style volatility-adjusted momentum with minimum hold and cash rule",
+    "family": "cross-sectional momentum with risk-off",
+    "rule": "Weekly: score the top-500 liquid NSE stocks by volatility-adjusted composite momentum (stand-in: 12- and 6-month return over volatility). Candidates are the top decile. Hold 15-25 names weighted by rank and inverse volatility. Replace a holding only after a 1-month minimum hold, when it fails retention or a stronger candidate appears. Hold cash when too few candidates qualify or the broad market is declining.",
+    "params": {
+      "entry_percentile": 90,
+      "n_holdings_min": 15,
+      "n_holdings_max": 25,
+      "review": "weekly",
+      "min_hold_days": 30,
+      "score": "proprietary; stand-in sharpe of 12m and 6m returns",
+      "cash_rule": "proprietary; stand-in index below 200-day average"
+    },
+    "instruments": "NSE cash equities; liquid ETF when in cash",
+    "holding_period": "2 to 3 months per stock",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "PMS live since 5 Mar 2019, net of fees, to 6 Nov 2026: 7y 17.8% p.a. vs Nifty 50 TRI 12.4%; 5y 7.0% vs 8.3%; 3y 7.9% vs 10.1%; 2y -5.9% vs 2.3%; 1y 6.6% vs -0.8%. Smallcase 3y CAGR 14.91% at closure (factsheet 6 Oct 2025).",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Retail product closed (smallcase ended 30 Sep 2025; PMS minimum Rs 50 lakh). A DIY clone at 15-20 names turns over about 20% a month: about 2% a year in charges at Rs 7,500 positions, plus 20% STCG.",
+    "sources": [
+      "https://premium.capitalmind.in/introduction-to-capitalmind-momentum-model/",
+      "https://capitalmind.in/portfolio-management-service/momentum",
+      "https://premium.capitalmind.in/2025/08/whats-next-for-capitalmind-momentum-the-flexi-cap-path/",
+      "https://assets.smallcase.com/factsheets/CMMO_0001.pdf",
+      "https://www.pmsaifworld.com/portfolio/wizemarkets-capitalmind-momentum-fund"
+    ]
+  },
+  {
+    "id": "small_account_india__wi_mi_india_top10",
+    "name": "Weekend Investing Mi India Top 10 style: Nifty 50 top-10 momentum, monthly",
+    "family": "cross-sectional momentum (large cap)",
+    "rule": "Monthly on the last trading day's close: rank Nifty 50 stocks by momentum (formula undisclosed; stand-in 12-month return skipping the last month). Hold 10 at 10% each. Let winners run; sell a holding only if it meets the exit criterion (stand-in: rank worse than 20) and replace it with the best-ranked non-holding. Trade on the first trading day of the next month.",
+    "params": {
+      "universe": "Nifty 50",
+      "n_holdings": 10,
+      "rebalance": "monthly",
+      "momentum_metric": "undisclosed; stand-in 12-1 month return",
+      "exit_rank": 20,
+      "stress_cash_rule": "undisclosed"
+    },
+    "instruments": "Nifty 50 stocks",
+    "holding_period": "monthly check; low churn",
+    "data_needed": [
+      "daily_equity",
+      "other"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Manager-reported: Covid fall (Feb-Mar 2020) -26% vs Nifty -38.4%; live CAGR is login-gated. Fee Rs 6,999 a year; smallcase minimum Rs 86,228 (Nov 2026).",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "10 positions of Rs 15,000 in India's most liquid stocks; about 0.62% per swap; low churn. Only if self-built: the subscription alone is 4.7% of capital.",
+    "sources": [
+      "https://weekendinvesting.com/strategies/mi-india-top-10/",
+      "https://www.smallcase.com/smallcase/mi-india-top10-WKIMO_0020",
+      "https://www.smallcase.com/manager/weekend-investing/smallcases"
+    ]
+  },
+  {
+    "id": "small_account_india__wi_mi_nnf10",
+    "name": "Weekend Investing Mi NNF10 style: Nifty Next 50 top-10 momentum, monthly, always invested",
+    "family": "cross-sectional momentum (large cap)",
+    "rule": "Monthly on the last trading day's close: rank Nifty Next 50 stocks by momentum (formula undisclosed; stand-in 6- or 12-month return). Always hold the top 10, never cash; drop losers and add new leaders on the first trading day of the next month. The published version resets each holding to 10% monthly; at small size trade only entries and exits.",
+    "params": {
+      "universe": "Nifty Next 50",
+      "n_holdings": 10,
+      "rebalance": "monthly",
+      "equal_weight_reset": true,
+      "momentum_metric": "undisclosed"
+    },
+    "instruments": "Nifty Next 50 stocks",
+    "holding_period": "monthly",
+    "data_needed": [
+      "daily_equity",
+      "other"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Manager-reported, Apr 2016 to Nov 2022 (backtest, live from 12 Nov 2020): CAGR 21.1% vs Nifty Next 50 13.3%; max drawdown 23.6% vs 42%.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "10 positions; smallcase minimum Rs 1,14,341 fits; about 0.62% per swap. Self-build only (fee is about 6.7% of capital). Weights will be uneven because of high-priced shares.",
+    "sources": [
+      "https://www.smallcase.com/blog/the-mi-nnf-10-smallcase-a-passive-money-spinning-strategy/",
+      "https://www.smallcase.com/manager/weekend-investing/smallcases"
+    ]
+  },
+  {
+    "id": "small_account_india__wi_rotational_midsmall",
+    "name": "Weekend Investing Mi 20 / Mi 35 style: weekly rotational momentum in mid and small caps",
+    "family": "cross-sectional momentum (mid and small cap)",
+    "rule": "Weekly: rank stocks in the Nifty MidSmallcap 400 (Mi 20) or Nifty Smallcap 250 (Mi 35) by momentum (formula undisclosed). Hold the strongest N equal weight (20 at 5% each, or up to 35). Stay invested regardless of market conditions. At each weekly review remove holdings that meet the exit criterion and replace them with the next strongest.",
+    "params": {
+      "universe": "MidSmallcap 400 | Smallcap 250",
+      "n_holdings": "20 to 35",
+      "rebalance": "weekly",
+      "momentum_metric": "undisclosed"
+    },
+    "instruments": "NSE mid and small cap stocks",
+    "holding_period": "weekly check; weeks to months per stock",
+    "data_needed": [
+      "daily_equity",
+      "other"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Manager-reported: Mi 20, 1 Apr 2016 to 25 Nov 2022, CAGR 26.8% vs MidSmallcap 400 16%, return/max-drawdown 0.7 vs 0.3. Mi 35 CAGR from Apr 2016 to 31 Mar 2020 9.7% vs Smallcap 250 -9%.",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "20 to 35 positions of Rs 4,300 to 7,500 rotated weekly: 0.8% to 1.2% per swap, smallcase minimums Rs 2.04 to 2.64 lakh, small-cap slippage. Survivorship bias inflates small-cap backtests by about 5 points a year.",
+    "sources": [
+      "https://www.smallcase.com/blog/mi-20-your-must-have-affordable-mid-small-cap-strategy/",
+      "https://www.smallcase.com/blog/mi-35-extracting-alpha-from-smallcaps/",
+      "https://weekendinvesting.com/strategies/mi-20/",
+      "https://www.smallcase.com/manager/weekend-investing/smallcases",
+      "https://arxiv.org/abs/2603.19380"
+    ]
+  },
+  {
+    "id": "small_account_india__wi_absolute_momentum_cash",
+    "name": "Weekend Investing Mi 25 / Mi MT Allcap style: absolute momentum, cash when nothing qualifies",
+    "family": "absolute momentum (trend) with cash",
+    "rule": "Weekly: among liquid stocks above Rs 1,000 crore market cap, a stock qualifies on absolute momentum (stand-in: close above 200-day average, 6-month return positive, near 52-week high). Hold up to N qualifiers equal weight (25 at 4%, or 20 at 5%). Exit when the exit criterion triggers (stand-in: close below 100-day average). Unfilled slots sit in a liquid ETF.",
+    "params": {
+      "n_holdings_max": "20 to 25",
+      "min_mcap_cr": 1000,
+      "review": "weekly",
+      "cash_instrument": "LIQUIDBEES",
+      "entry_exit_rules": "undisclosed"
+    },
+    "instruments": "liquid NSE stocks; LIQUIDBEES",
+    "holding_period": "weekly check; weeks to months per stock",
+    "data_needed": [
+      "daily_equity",
+      "fundamentals"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Manager-reported, Mi 25, Apr 2016 to Jan 2023: +506% vs Smallcap 250 +134%, CAGR 30.2%; Jan 2018 to Mar 2020 fall 29% vs 55%.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "The cash rule suits a small account, but 20 to 25 weekly-reviewed small caps is too many (minimums Rs 1.96 to 1.99 lakh). Test with 8 to 12 names.",
+    "sources": [
+      "https://www.smallcase.com/blog/mi-25-our-flagship-smallcap-strategy/",
+      "https://weekendinvesting.com/strategies/mi-25/",
+      "https://weekendinvesting.com/strategies/mi-mt-allcap/",
+      "https://www.smallcase.com/manager/weekend-investing/smallcases"
+    ]
+  },
+  {
+    "id": "small_account_india__wi_ath_momentum",
+    "name": "Weekend Investing Mi ATH style: stocks at all-time highs, weekly, cash otherwise",
+    "family": "breakout / 52-week-high momentum",
+    "rule": "Weekly: among NSE stocks above Rs 500 crore market cap with very high turnover, select by momentum rank and nearness to the all-time or multi-year high (stand-in: close within 5% of highest close). Hold up to 10, equal weight. Drop names that fail the exit criterion (stand-in: 15% off peak or below 50-day average). If no new picks qualify, hold a liquid ETF.",
+    "params": {
+      "n_holdings_max": 10,
+      "min_mcap_cr": 500,
+      "ath_proximity_pct": 5,
+      "review": "weekly",
+      "cash_instrument": "LIQUIDBEES",
+      "exit_rule": "undisclosed"
+    },
+    "instruments": "liquid NSE stocks; LIQUIDBEES",
+    "holding_period": "weekly check; very high churn",
+    "data_needed": [
+      "daily_equity",
+      "fundamentals"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Manager-reported: CAGR since 2016 above 40%; Covid fall (Feb-Mar 2020) -16% vs Nifty 500 -38.3%; described as very high churn.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "10 positions fit (minimum Rs 1,04,339) and it holds cash in weak markets, but very high churn at about 0.62% per round trip and 20% STCG on every gain.",
+    "sources": [
+      "https://weekendinvesting.com/strategies/mi-ath-2/",
+      "https://www.smallcase.com/manager/weekend-investing/smallcases",
+      "https://stockviz.substack.com/p/momentum-without-the-crash"
+    ]
+  },
+  {
+    "id": "small_account_india__wi_evergreen_momentum_gold",
+    "name": "Weekend Investing Mi EverGreen style: 75% momentum stocks, 25% gold ETF",
+    "family": "momentum plus asset allocation",
+    "rule": "Hold 25% in a gold ETF permanently. With the other 75% hold the 20 strongest-momentum Nifty 200 stocks at about 3.75% each (ranking undisclosed). At each monthly rebalance remove holdings that meet the exit criterion and add the strongest non-holdings. For small accounts scale the stock sleeve to 8-10 names.",
+    "params": {
+      "gold_weight": 0.25,
+      "n_stocks": 20,
+      "universe": "Nifty 200",
+      "rebalance": "monthly",
+      "momentum_metric": "undisclosed"
+    },
+    "instruments": "Nifty 200 stocks; gold ETF",
+    "holding_period": "monthly",
+    "data_needed": [
+      "daily_equity",
+      "other"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Manager-reported: Covid fall (Feb-Mar 2020) -18.7% vs Nifty 200 -38.2%; worst backtest fall -41.27% vs Nifty -59%.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "As specified it needs about Rs 3.1 lakh (20 stocks plus gold). A scaled version with 8 stocks plus a gold ETF fits.",
+    "sources": [
+      "https://weekendinvesting.com/strategies/mi-evergreen/",
+      "https://www.smallcase.com/manager/weekend-investing/smallcases"
+    ]
+  },
+  {
+    "id": "small_account_india__static_nifty_gold_rebalance",
+    "name": "Static Nifty and gold allocation with periodic rebalance (NG5050)",
+    "family": "strategic asset allocation",
+    "rule": "Hold 50% Nifty 50 ETF and 50% gold ETF; rebalance back to equal weight monthly. Variant: 25% each in large-cap, mid-cap and small-cap ETFs and gold. For small accounts rebalance quarterly or only when weights drift by 5 points.",
+    "params": {
+      "weights": {
+        "NIFTYBEES": 0.5,
+        "GOLDBEES": 0.5
+      },
+      "rebalance": "monthly",
+      "alt_rebalance": "quarterly or 5-point drift band"
+    },
+    "instruments": "NIFTYBEES, GOLDBEES",
+    "holding_period": "permanent; periodic rebalance",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "About 15.2% CAGR over roughly 3 years to Oct 2024 for NG5050 (second-hand forum quote). Buy and hold over about 11 years to Nov 2025: Nifty +214% (38% drawdown), GoldM +161% (21% drawdown).",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Two ETFs and a few orders a year at about Rs 60 to 110 each; no subscription. It is the benchmark the other strategies must beat after costs and tax.",
+    "sources": [
+      "https://www.smallcase.com/smallcase/WKIET_0001",
+      "https://www.smallcase.com/manager/weekend-investing/smallcases",
+      "https://tradingqna.com/t/dual-momentum-strategy-with-niftybees-goldbees/174470",
+      "https://tradingqna.com/t/trend-following-in-india-part-3-nifty-gold-strategy/188767"
+    ]
+  },
+  {
+    "id": "small_account_india__momentum_market_trend_overlay",
+    "name": "Stock momentum with a broad-market trend overlay (MWM Momentum style)",
+    "family": "cross-sectional momentum with risk-off",
+    "rule": "Weekly: rank liquid NSE stocks by price momentum; hold the top 20 equal weight; cut names that fall out of the ranks. Apply a trend filter on the broad market (stand-in: Nifty 500 close above its 200-day average). When the filter is off, move the portfolio to a liquid ETF and stop new buys.",
+    "params": {
+      "n_holdings": 20,
+      "review": "weekly",
+      "momentum_metric": "proprietary",
+      "market_filter": "undisclosed; stand-in 200-day average on Nifty 500"
+    },
+    "instruments": "NSE cash equities; liquid ETF",
+    "holding_period": "weekly check",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "MWM Momentum smallcase, live data only: 14.7% 3-year CAGR at 4 Aug 2025 (launched 14 Apr 2020); not independently validated.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Same cost problem as any 20-name weekly momentum book; the Rs 12,001 fee is 8% of capital, so self-build with 10 to 12 names.",
+    "sources": [
+      "https://assets.smallcase.com/factsheets/MWMO_0002.pdf"
+    ]
+  },
+  {
+    "id": "small_account_india__low_liquidity_momentum_top15",
+    "name": "Low-liquidity half of the top-30 momentum names, annual rebalance",
+    "family": "cross-sectional momentum x illiquidity",
+    "rule": "Once a year: rank Nifty 200 stocks by 12-month return and take the top 30. Compute scaled turnover = average daily traded value / market capitalisation. Buy the 15 with the lowest scaled turnover, equal weight. Hold 12 months, then repeat.",
+    "params": {
+      "universe": "Nifty 200",
+      "momentum_lookback_months": 12,
+      "top_n": 30,
+      "hold_n": 15,
+      "rebalance": "annual",
+      "liquidity_metric": "traded value / market cap"
+    },
+    "instruments": "Nifty 200 stocks",
+    "holding_period": "12 months",
+    "data_needed": [
+      "daily_equity",
+      "fundamentals",
+      "other"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Dec 2006 to Jun 2025, net of brokerage, slippage and tax: low-turnover half 19.43% CAGR (max drawdown -66.41%); all 30 names 14.60% (-70.61%); high-turnover half 8.51% (-75.09%); Nifty 50 10.41% (-55.12%).",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "15 positions of Rs 10,000 with one round trip a year (about 0.69%) and mostly long-term gains. Expect drawdowns above 60%; single-author result.",
+    "sources": [
+      "https://freefincal.com/is-indian-momentum-investing-just-a-liquidity-illusion/"
+    ]
+  },
+  {
+    "id": "small_account_india__dual_momentum_nifty_gold",
+    "name": "Dual momentum between a Nifty ETF, a gold ETF and debt",
+    "family": "tactical asset allocation (momentum)",
+    "rule": "At each check (month end; variant quarter end) compute trailing return (12 months; variants 3 months or 200 days) for a Nifty ETF, a gold ETF and a debt or liquid benchmark. If Nifty beats debt, hold whichever of Nifty and gold has the higher return; otherwise hold the debt or liquid fund. One asset at a time; switch at the next open.",
+    "params": {
+      "lookback": "12 months (variants 3 months, 200 days)",
+      "check": "monthly (variant quarterly)",
+      "assets": [
+        "NIFTYBEES",
+        "GOLDBEES",
+        "LIQUIDBEES"
+      ],
+      "switch_cost_pct": 0.5
+    },
+    "instruments": "NIFTYBEES, GOLDBEES, liquid ETF or fund",
+    "holding_period": "1 to 3 months between checks",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Monthly 12-month version Dec 1996 to Jan 2024: 14.0% vs Nifty 12.4%, drawdown about 21% vs 50%+ (no costs). 200-day version 2014-2024: 18.79% vs 12.13%. Quarterly 3-month version re-run with 0.5% switch cost, Mar 2007 to Dec 2024: 9.11% CAGR, -29.7% drawdown, worse than holding either asset.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "One ETF order each way (about Rs 106 per full switch). The main drag is 20% STCG on every profitable switch made within a year.",
+    "sources": [
+      "https://tradingqna.com/t/dual-momentum-strategy-with-niftybees-goldbees/174470",
+      "https://samasthiti.substack.com/p/indian-edition-of-the-dual-momentum",
+      "https://momentumlab.substack.com/p/backtesting-dual-momentum-strategy",
+      "https://quantindia.substack.com/p/momentum-in-the-indian-market"
+    ]
+  },
+  {
+    "id": "small_account_india__supertrend_daily_nifty_long",
+    "name": "Daily Supertrend(10,3) long-only on Nifty via ETF",
+    "family": "time-series trend following",
+    "rule": "On Nifty daily bars compute Supertrend (ATR 10, multiplier 3). Buy the Nifty ETF at the next open when the close is above the Supertrend line; sell at the next open when the close is below it. Long only; cash or liquid ETF when out. Comparison variant: 8-day EMA price cross.",
+    "params": {
+      "atr_period": 10,
+      "multiplier": 3,
+      "direction": "long only",
+      "alt_ema_period": 8
+    },
+    "instruments": "Nifty 50 ETF (index futures need more capital)",
+    "holding_period": "weeks to months; about 4 trades a year",
+    "data_needed": [
+      "daily_index",
+      "daily_equity"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Nifty spot Jan 2015 to Oct 2025, no costs: 44 long trades averaging 270 points (8-EMA variant 256 trades averaging 35 points); short side lost; Supertrend drawdown about 70% deeper than the EMA variant.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "About 4 ETF round trips a year at about Rs 106 each. The futures version does not fit (margin about Rs 2.2 lakh, notional about Rs 19 lakh).",
+    "sources": [
+      "https://tradingqna.com/t/trend-following-in-india-part-2-building-a-simple-system-that-works/188483"
+    ]
+  },
+  {
+    "id": "small_account_india__supertrend_hourly_nifty_gold",
+    "name": "Hourly Supertrend(10,3) long-only on Nifty and gold, 50:50",
+    "family": "time-series trend following (two assets)",
+    "rule": "On 1-hour bars compute Supertrend(10,3) separately for Nifty and gold. For each, go long at the next bar's open after a close above the line; exit at the next bar's open after a close below it. Long only. Allocate half the capital to each sleeve.",
+    "params": {
+      "timeframe": "1 hour",
+      "atr_period": 10,
+      "multiplier": 3,
+      "weights": [
+        0.5,
+        0.5
+      ]
+    },
+    "instruments": "Nifty and MCX GoldM futures; NIFTYBEES and GOLDBEES as substitutes",
+    "holding_period": "days to weeks",
+    "data_needed": [
+      "intraday"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "About 11 years to Nov 2025, unlevered, no costs: Nifty sleeve +205%, GoldM +169%, 50:50 +187% with 6.6% max drawdown (18.5% and 11.8% for the sleeves); buy and hold Nifty +214% with a 38% drawdown.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Futures need about Rs 3.45 lakh margin (Rs 15.75 lakh at 2x leverage). The ETF substitute fits but needs hourly data, far more trades and pays 20% STCG.",
+    "sources": [
+      "https://tradingqna.com/t/trend-following-in-india-part-3-nifty-gold-strategy/188767"
+    ]
+  },
+  {
+    "id": "small_account_india__donchian20_sma5x20_nifty",
+    "name": "Donchian 20-day breakout and 5x20 SMA crossover on Nifty",
+    "family": "time-series trend following",
+    "rule": "Donchian: go long when the daily close exceeds the prior 20-day high; exit or reverse when it closes below the prior 20-day low. SMA variant: long when the 5-day SMA is above the 20-day SMA; exit or short when below. Test long-short, long only and short only on Nifty daily bars.",
+    "params": {
+      "donchian_days": 20,
+      "sma_fast": 5,
+      "sma_slow": 20
+    },
+    "instruments": "Nifty 50 ETF or index futures",
+    "holding_period": "days to weeks",
+    "data_needed": [
+      "daily_index"
+    ],
+    "evidence": "negative",
+    "india_evidence": true,
+    "reported_performance": "Nifty daily, about 10 years to Oct 2025, before costs: long-short Sharpe very poor with negative median trade; long-only Donchian spent 5 years in drawdown; 5x20 long-only made about 7,500 points in 10 years.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Fits mechanically with a Nifty ETF, long only. The evidence is negative.",
+    "sources": [
+      "https://tradingqna.com/t/trend-following-in-india-part-1-testing-donchian-s-classic-rules/188234"
+    ]
+  },
+  {
+    "id": "small_account_india__nifty50_inclusion_two_week",
+    "name": "Nifty 50 inclusion trade: buy on effective date, hold two weeks",
+    "family": "event-driven (index reconstitution)",
+    "rule": "For each stock added to the Nifty 50 at the March or September review (exclude merger and demerger cases): buy at the close on the effective date (first working day after that month's F&O expiry), hold 10 trading days, then sell. Split capital equally if several stocks are added.",
+    "params": {
+      "hold_trading_days": 10,
+      "entry": "effective date close",
+      "reviews": "March, September"
+    },
+    "instruments": "the stock being added to the Nifty 50",
+    "holding_period": "2 weeks, twice a year",
+    "data_needed": [
+      "daily_equity",
+      "events"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "33 inclusions 2015 to 2025, price returns, no costs: 2-week win rate 78.8%, mean +2.21%, median +3.07%; compounded +22.25% over 10 years with 14.3% max drawdown; 6-month median -2.28%.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "One or two stock trades twice a year at about 0.3% round trip. Adds only about 2% a year, so it is an add-on, not a core strategy.",
+    "sources": [
+      "https://tradingqna.com/t/the-nifty-50-inclusion-trade-does-it-still-work/195419"
+    ]
+  },
+  {
+    "id": "small_account_india__etf_ki_dukan_rsi",
+    "name": "ETF ki Dukan (Mahesh Kaushik): buy the weakest equity ETF daily, sell at +4.57%",
+    "family": "mean reversion (ETF basket)",
+    "rule": "Daily after the close, across about 75 liquid equity ETFs (volume above 100,000 units, one per index, no gold or debt): compute RSI(14). Buy one fixed lot of the lowest-RSI ETF not already held; if the five lowest are all held, add to a held ETF only if its price is 3% below its last buy. Sell one lot per day: the most profitable holding at or above +4.57% on average cost.",
+    "params": {
+      "rsi_period": 14,
+      "rank_depth": 5,
+      "lot_inr": 20000,
+      "average_down_pct": 3,
+      "target_pct": 4.57,
+      "max_buys_per_day": 1,
+      "max_sells_per_day": 1,
+      "alt_rank": "pct below 20-day average | nearness to 52-week low",
+      "alt_targets_pct": [
+        3.14,
+        6.28
+      ]
+    },
+    "instruments": "NSE-listed equity ETFs",
+    "holding_period": "days to months; no stop",
+    "data_needed": [
+      "daily_equity"
+    ],
+    "evidence": "anecdotal",
+    "india_evidence": true,
+    "reported_performance": "No independent backtest; evidence is the creator's experience and a 3-month diary. The 2025 variant took a 20% loss on a realty ETF bought repeatedly without price spacing.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Rs 20,000 lots cost about 0.38% per round trip against a 4.57% target, but only 7 lots fit in Rs 1.5 lakh and there is no stop, so capital locks up in falling sector ETFs.",
+    "sources": [
+      "https://therationalinvestor.in/blog/etf-ki-dukan-strategy",
+      "https://www.maheshkaushik.com/"
+    ]
+  },
+  {
+    "id": "small_account_india__kaushik_nifty_etf_grid_157",
+    "name": "Mahesh Kaushik's Nifty 50 ETF daily grid (1.57% steps)",
+    "family": "grid / mean reversion (index ETF)",
+    "rule": "Daily at the close, at most one trade. Sell first: among held Nifty 50 ETF lots more than 1.57% above purchase price, sell the one with the largest gain; no buy that day. Otherwise, if the most recently bought lot is more than 1.57% below its purchase price, or has already been sold, buy Rs 20,000 of the highest-ranked Nifty 50 ETF not held. Never average an ETF already held.",
+    "params": {
+      "step_pct": 1.57,
+      "lot_inr": 20000,
+      "n_etfs": 15,
+      "max_trades_per_day": 1,
+      "fund_inr": 300000
+    },
+    "instruments": "15 different Nifty 50 ETFs (NIFTYBEES, SETFNIF50, HDFCNIFTY, ...)",
+    "holding_period": "median about 15 days; longest 401 days",
+    "data_needed": [
+      "daily_equity"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Author's backtest 21 Oct 2021 to 19 Oct 2026, no costs or tax: 148 sells, booked Rs 65,697, open loss Rs 13,029 on 12 lots, peak deployed Rs 2,41,536; about 3.5% a year on the Rs 3 lakh fund.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Designed for Rs 3 lakh at Rs 20,000 lots; halving the lot doubles the cost share (about Rs 50 on a Rs 220 average gain). Net return is below a liquid fund in the author's own test.",
+    "sources": [
+      "https://www.maheshkaushik.com/"
+    ]
+  },
+  {
+    "id": "small_account_india__nifty50_below_20dma_5pct",
+    "name": "Buy the Nifty 50 stock furthest below its 20-day average, sell at +5%",
+    "family": "mean reversion (stocks)",
+    "rule": "Daily: for each Nifty 50 stock compute (close - 20-day SMA) / 20-day SMA. Buy one fixed lot of the stock furthest below its 20-day average. Sell any holding whose gain exceeds 5%. No stop loss.",
+    "params": {
+      "sma_days": 20,
+      "target_pct": 5,
+      "lot_inr": 10000,
+      "max_buys_per_day": 1
+    },
+    "instruments": "Nifty 50 stocks",
+    "holding_period": "days to months; no stop",
+    "data_needed": [
+      "daily_equity",
+      "other"
+    ],
+    "evidence": "anecdotal",
+    "india_evidence": true,
+    "reported_performance": "Self-reported XIRR 44.91% from Sep 2023 to Apr 2024 (7 bull-market months, unaudited); the author expects 12-24%.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Lots of Rs 7,500 to 15,000 cost 0.6% to 0.8% per round trip against a 5% target, but there is no exit for losers, so capital can lock up.",
+    "sources": [
+      "https://tradingqna.com/t/buy-the-stock-has-comparatively-fallen-the-most-from-its-20-dma/164322"
+    ]
+  },
+  {
+    "id": "small_account_india__v20_pullback",
+    "name": "V20 pullback: buy the base of a 20% green-candle run, sell at its top",
+    "family": "mean reversion (pattern)",
+    "rule": "Scan daily bars for a run of 2 or more consecutive green candles that gains at least 20% from the run's lowest low to its highest high. Place a standing limit buy at the run's lowest low for a fixed cash amount. When filled, place a limit sell at the run's highest high. No stop. Optional filter: run base below the 200-day SMA unless the stock is a large cap.",
+    "params": {
+      "min_gain_pct": 20,
+      "min_run_len": 2,
+      "cash_per_trade_inr": 10000,
+      "dma_filter_days": 200
+    },
+    "instruments": "NSE cash equities",
+    "holding_period": "open-ended",
+    "data_needed": [
+      "daily_equity"
+    ],
+    "evidence": "anecdotal",
+    "india_evidence": true,
+    "reported_performance": "No published statistics found (open-source TradingView script, July 2026).",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "15 slots of Rs 10,000 at about 0.69% per round trip against a 20% target; no margin or shorting needed. Untested, and capital can sit in unfilled or stuck orders.",
+    "sources": [
+      "https://www.tradingview.com/script/2F8X7p1e-V20-Strategy/"
+    ]
+  },
+  {
+    "id": "small_account_india__short_straddle_920",
+    "name": "9:20 intraday short straddle with per-leg stops",
+    "family": "intraday option selling",
+    "rule": "At 09:20 sell the at-the-money call and put of the current weekly Nifty expiry, one lot each. Place a stop on each leg at entry premium x 1.25 (variants 1.35, 1.40). If one leg stops out, keep the other with its stop. Square off everything at 15:10-15:15.",
+    "params": {
+      "entry_time": "09:20",
+      "exit_time": "15:10",
+      "leg_stop_pct": 25,
+      "alt_leg_stop_pct": [
+        35,
+        40
+      ],
+      "alt_entry_times": [
+        "09:16",
+        "09:30",
+        "10:30"
+      ]
+    },
+    "instruments": "Nifty weekly options",
+    "holding_period": "intraday",
+    "data_needed": [
+      "intraday"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "About 1,300 trades over 5 years to May 2022 were profitable with 25% stops but negative once the top 10% of trades are removed; the Bank Nifty version's edge diminished in 2023; a no-stop Nifty test in Dec 2024 was positive on 12 of 20 days (about +434 points before costs).",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "Margin about Rs 2.36 lakh per lot (Feb 2025). Four orders a day cost about Rs 135, roughly 22% of Rs 1.5 lakh a year. Stops get hunted; 91% and 87.7% of retail F&O traders lost in FY25 and FY26.",
+    "sources": [
+      "https://tradingqna.com/t/detailed-analysis-of-920-short-straddle-strategy-is-it-stopped-working/130677",
+      "https://tradingqna.com/t/reports-of-the-death-of-920-short-straddle-are-greatly-exaggerated/179061",
+      "https://www.marketcalls.in/futures-and-options/is-the-920-straddle-no-more-working.html",
+      "https://www.marketcalls.in/futures-and-options/how-the-9-20-intraday-straddlers-are-being-gamed.html",
+      "https://tradingqna.com/t/is-nifty-income-short-straddle-strategy-on-streak-really-profitable-see-details/122634",
+      "https://algotest.in/blog/the-920-straddle-strategy-defined.md",
+      "https://www.valueresearchonline.com/stories/225398/average-trader-lost-rs-1-1-lakh-fo-fy25/",
+      "https://openthemagazine.com/business/sebi-fo-loss-study-explained-why-9-in-10-retail-traders-lost-91685-crore-in-fy26",
+      "https://www.angelone.in/pricing"
+    ]
+  },
+  {
+    "id": "small_account_india__iron_fly_condor_intraday",
+    "name": "Hedged option selling: 9:20 iron fly and iron condor",
+    "family": "defined-risk option selling",
+    "rule": "Iron fly: at 09:20 sell the at-the-money Nifty weekly call and put and buy the call 300 points above and the put 300 points below. Iron condor: sell a call and a put about 300 points out of the money and buy wings further out. Stop each short leg at a fixed percentage of premium or exit at a combined-premium target; square off by 15:10 or hold to expiry.",
+    "params": {
+      "wing_width_points": 300,
+      "short_offset_points": "0 (fly) | 300 (condor)",
+      "leg_stop_pct": 25,
+      "exit_time": "15:10 or expiry"
+    },
+    "instruments": "Nifty weekly options",
+    "holding_period": "intraday to one week",
+    "data_needed": [
+      "intraday",
+      "daily_fo"
+    ],
+    "evidence": "anecdotal",
+    "india_evidence": true,
+    "reported_performance": "No published track record found. Margin example, Feb 2025: Rs 93,741 for a one-lot iron fly vs Rs 2,36,316 unhedged.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "One lot fits on margin, but eight orders a day cost about Rs 235 (about 38% of capital a year if run daily); a weekly hold-to-expiry version costs far less but has no evidence.",
+    "sources": [
+      "https://tradingqna.com/t/reports-of-the-death-of-920-short-straddle-are-greatly-exaggerated/179061",
+      "https://tradingqna.com/t/detailed-analysis-of-920-short-straddle-strategy-is-it-stopped-working/130677",
+      "https://algotest.in/blog/6-popular-algo-trading-strategies-for-retail-traders-in-india.md",
+      "https://www.angelone.in/pricing"
+    ]
+  },
+  {
+    "id": "small_account_india__opening_range_breakout_15m",
+    "name": "15-minute opening range breakout",
+    "family": "intraday momentum",
+    "rule": "Record the high and low of the first 15 minutes (09:15-09:30). Buy when price breaks above the range high (optionally short below the range low). Stop at the opposite side of the range; exit at a fixed target or at the close. One trade per day.",
+    "params": {
+      "range_minutes": 15,
+      "stop": "opposite side of range (user choice)",
+      "exit": "target or end of day"
+    },
+    "instruments": "index futures or options; liquid stocks intraday",
+    "holding_period": "intraday",
+    "data_needed": [
+      "intraday"
+    ],
+    "evidence": "anecdotal",
+    "india_evidence": true,
+    "reported_performance": "Listed among the six most automated retail strategies (AlgoTest, Mar 2026); no performance published.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "The intraday equity version fits (about 0.08% to 0.13% per round trip at Rs 1,00,000 to 50,000); index derivative versions hit lot and margin limits. Needs intraday data and execution.",
+    "sources": [
+      "https://algotest.in/blog/6-popular-algo-trading-strategies-for-retail-traders-in-india.md",
+      "https://tradingqna.com/t/backtest-vs-papertrading-results-from-streak-pretty-close/116932"
+    ]
+  },
+  {
+    "id": "small_account_india__ema_9_20_crossover",
+    "name": "9 EMA / 20 EMA crossover",
+    "family": "moving-average trend following",
+    "rule": "Buy when the 9-period EMA crosses above the 20-period EMA; sell (or reverse) when it crosses below. Timeframe is a parameter (5-minute, 15-minute or daily).",
+    "params": {
+      "fast": 9,
+      "slow": 20,
+      "timeframe": "5m | 15m | 1d"
+    },
+    "instruments": "any liquid stock, ETF or index derivative",
+    "holding_period": "intraday to weeks",
+    "data_needed": [
+      "daily_equity",
+      "daily_index",
+      "intraday"
+    ],
+    "evidence": "anecdotal",
+    "india_evidence": true,
+    "reported_performance": "No performance published by the platform. Closest Indian tests: an 8-EMA price cross on Nifty daily made 35 points a trade over 256 long trades (Jan 2015 to Oct 2025, before costs); a 5x20 SMA cross was judged not tradable.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Runs on a single ETF with small orders; cost depends on timeframe. Related Indian evidence is weak to negative.",
+    "sources": [
+      "https://algotest.in/blog/6-popular-algo-trading-strategies-for-retail-traders-in-india.md",
+      "https://tradingqna.com/t/trend-following-in-india-part-2-building-a-simple-system-that-works/188483",
+      "https://tradingqna.com/t/trend-following-in-india-part-1-testing-donchian-s-classic-rules/188234"
+    ]
+  },
+  {
+    "id": "small_account_india__intraday_mean_reversion_vwap_bollinger",
+    "name": "Intraday mean reversion to VWAP or Bollinger middle band",
+    "family": "intraday mean reversion",
+    "rule": "Intraday on liquid stocks: short when price is stretched above session VWAP by a threshold, or touches the upper Bollinger band (20 periods, 2 standard deviations); cover at VWAP or the middle band. Mirror rule for longs. Flat by the close. Thresholds and stops are user parameters.",
+    "params": {
+      "vwap_stretch": "unspecified",
+      "bb_period": 20,
+      "bb_std": 2,
+      "exit": "VWAP or middle band",
+      "flat_by": "15:15"
+    },
+    "instruments": "liquid NSE stocks intraday; index derivatives",
+    "holding_period": "intraday",
+    "data_needed": [
+      "intraday"
+    ],
+    "evidence": "anecdotal",
+    "india_evidence": true,
+    "reported_performance": "No performance published. One long-time forum systematic trader says intraday mean reversion and momentum in stocks are both feasible and scalping probably is not (no numbers).",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Intraday equity permits shorting and leverage at about 0.05% to 0.13% per round trip, but per-trade edges are small and it needs intraday data and fast execution.",
+    "sources": [
+      "https://algotest.in/blog/6-popular-algo-trading-strategies-for-retail-traders-in-india.md",
+      "https://tradingqna.com/t/trend-following-in-india-part-1-testing-donchian-s-classic-rules/188234"
+    ]
+  },
+  {
+    "id": "small_account_india__sip_dip_timing",
+    "name": "SIP timing on a Nifty ETF: buy dips, or only above/below the 200-day average",
+    "family": "deployment timing",
+    "rule": "Each month park the instalment in a liquid fund. Deploy into a Nifty ETF only when a dip signal fires: index below its 200-day (or 10-month) average, or a daily fall or gap-down of at least X% (X from 0 to 4). Variant: deploy at month end if no signal fired. Never sell. Compare with a plain monthly SIP.",
+    "params": {
+      "dip_threshold_pct": "0 to 4 in 0.2 steps",
+      "ma_days": 200,
+      "fallback": "month end | none",
+      "idle_rate_pct": 5
+    },
+    "instruments": "Nifty 50 ETF; liquid fund",
+    "holding_period": "accumulation; no selling",
+    "data_needed": [
+      "daily_index"
+    ],
+    "evidence": "negative",
+    "india_evidence": true,
+    "reported_performance": "Nifty 50, about 1994 to 2024: 0 of 152 dip rules beat the monthly SIP (12.04% XIRR); the most selective rules earned 8.65%. Sensex TRI, 122 rolling 15-year windows: no difference before tax, worse after.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Trivial to run with one ETF, but it concerns deploying new savings rather than growing a fixed pot, and the evidence is negative.",
+    "sources": [
+      "https://freefincal.com/stop-waiting-to-buy-on-market-dips-it-is-useless/",
+      "https://freefincal.com/?p=17637",
+      "https://finance-platform-fawn-ten.vercel.app/projects/buying-nifty-after-it-falls-152-tests-across-30-years-show-the-same-thing"
+    ]
+  },
+  {
+    "id": "small_account_india__liquid_fund_plus_nifty_leaps_call",
+    "name": "DIY capital-protected structure: debt fund plus a long-dated Nifty call",
+    "family": "option overlay (structured product)",
+    "rule": "On the first trading day of each year set capital = Nifty spot x lot size. Buy one at-the-money December Nifty call (strike rounded to the nearest 1,000). Invest the remainder in a liquid or gilt fund. Hold both to the December expiry; repeat.",
+    "params": {
+      "call": "ATM December expiry",
+      "strike_rounding": 1000,
+      "debt_leg": "liquid | gilt | conservative hybrid"
+    },
+    "instruments": "Nifty long-dated call option; debt mutual fund",
+    "holding_period": "1 year",
+    "data_needed": [
+      "daily_fo",
+      "daily_index",
+      "other"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "2019 to 2025 backtest: maximum potential drawdown 6.4% (2022); 2019 liquid+call 9.99% and gilt+call 14.40% vs NIFTYBEES 12.9%; lagged the index in 2025.",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "Needs capital equal to one lot's notional, about Rs 18 lakh.",
+    "sources": [
+      "https://tradingqna.com/t/limited-downside-nifty-strategy/189648"
+    ]
+  }
+]

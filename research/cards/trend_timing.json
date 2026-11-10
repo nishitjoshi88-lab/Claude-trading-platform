@@ -1,0 +1,837 @@
+[
+  {
+    "id": "trend_timing__single_ma_price_timing",
+    "name": "Single moving-average price timing (200-day / 100-day / 10-month)",
+    "family": "moving_average_timing",
+    "rule": "Daily: compute SMA(close, L) on the index ETF. If flat and close > SMA for m consecutive closes, buy at next open with 100% of capital. If long and close < SMA for n consecutive closes, sell at next open and hold liquid ETF. Monthly variant: evaluate only on the last trading day using the last 10 month-end closes. Long or cash only; no other stop.",
+    "params": {
+      "ma_type": "SMA",
+      "L_days": 200,
+      "L_days_range": [
+        10,
+        250
+      ],
+      "monthly_variant_L_months": 10,
+      "confirm_days_in_m": 1,
+      "confirm_days_out_n": 1,
+      "confirm_range": [
+        1,
+        5
+      ],
+      "ema_k_tested": [
+        10,
+        20,
+        50,
+        100,
+        200
+      ],
+      "cash_asset": "liquid ETF"
+    },
+    "instruments": "NIFTYBEES (also JUNIORBEES, MID150BEES) and a liquid ETF",
+    "holding_period": "months; about 1-4 round trips per year depending on L",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "India: Nifty Mar 2004-Jun 2020, 200-day rule 14.26% CAGR, max DD -28.68% vs buy-hold 12.68%, -58.45% (Freefloat, no costs). Nifty 22 years, 200-day rule 13.4% vs 13.5% buy-hold before costs (MoneyWorks4me). Nifty 2005-May 2020, 100-day rule 64 trades, buy-hold won 12 of 16 years, benefit only in 2008, 2011, 2020 (Capitalmind). Nifty 2005-2012, 80 EMA rules significant only in sharp decline (Slivka et al. 2014). US: S&P 500 1901-2012 lower risk, under one round trip a year (Faber). All gross of Indian tax.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "One liquid ETF and whole-account orders hit the Rs 20 brokerage cap; round trip about 0.07% plus spread. Main drag is 20% short-term tax on each exit within 12 months.",
+    "sources": [
+      "https://mebfaber.com/wp-content/uploads/2016/05/SSRN-id962461.pdf",
+      "https://freefloat.substack.com/p/tactical-allocation",
+      "https://www.moneyworks4me.com/investmentshastra/time-the-market-or-asset-allocation/",
+      "https://premium.capitalmind.in/2020/05/time-the-market-sleep-better/",
+      "https://www.indianjournalofcapitalmarkets.com/index.php/IJF/article/download/71980/58008/125426",
+      "https://econpapers.repec.org/RePEc:taf:quantf:v:11:y:2011:i:2:p:287-297",
+      "https://freefincal.com/market-timing-with-ten-month-moving-average-tactical-asset-allocation-backtest-part-2/",
+      "https://www.angelone.in/exchange-transaction-charges"
+    ]
+  },
+  {
+    "id": "trend_timing__dual_ma_crossover",
+    "name": "Dual moving-average crossover (5x20, 50x200, 150x365 days, 6x12 months)",
+    "family": "moving_average_timing",
+    "rule": "Compute fast and slow moving averages of the index close (5/20-day, 50/200-day, 150/365-day, or 6/12 month-end values). If fast > slow hold the index ETF with 100% of capital; if fast < slow hold liquid or gilt ETF. Evaluate daily for day pairs and at month-end for month pairs; trade at next open. No other stop.",
+    "params": {
+      "fast": 50,
+      "slow": 200,
+      "pairs_tested": [
+        [
+          5,
+          20
+        ],
+        [
+          50,
+          200
+        ],
+        [
+          150,
+          365
+        ],
+        [
+          "6m",
+          "12m"
+        ]
+      ],
+      "cash_asset": "liquid or gilt ETF"
+    },
+    "instruments": "NIFTYBEES, JUNIORBEES, MID150BEES, GOLDBEES, gilt ETF, momentum-index ETF; liquid ETF",
+    "holding_period": "5x20: days to weeks; slow pairs: many months (about 2 switches per 5 years for 6x12)",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "negative",
+    "india_evidence": true,
+    "reported_performance": "India: 5x20 SMA on Nifty daily Jan 2015-Oct 2025 'not tradable', negative median trade, no costs (Zerodha, S. Rao). 50x200 as SIP deployment gate on Nifty Nov 1995-May 2026: 11.9803% vs 11.9907% XIRR for plain SIP (Market Shack). 150x365 on Nifty, one 18.7-year window from 2000: XIRR 12.5% vs 11.5%, max DD halved, no tax (freefincal). 6x12-month rule failed badly on Sensex, Next 50, Midcap 150 after Mar 2020; worked on gold, gilts, Nasdaq 100 (freefincal).",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Mechanically trivial with one ETF; slow pairs trade rarely so cost is negligible. Evidence on Indian large-cap indices is weak to negative and tax on switches applies.",
+    "sources": [
+      "https://tradingqna.com/raw/188234",
+      "https://finance-platform-fawn-ten.vercel.app/projects/the-200-dma-golden-cross-on-nifty-confirmed-too-late-to-matter",
+      "https://freefincal.com/moving-average-crossover/",
+      "https://freefincal.com/a-risk-in-market-timing-that-122-years-of-backtesting-failed-to-reveal",
+      "https://freefincal.com/testing-a-double-moving-average-market-timing-model-with-gold-part-3/",
+      "https://freefincal.com/momentum-index-fund-will-tactical-entry-exit-give-better-results/"
+    ]
+  },
+  {
+    "id": "trend_timing__faber_gtaa5_10m_sma",
+    "name": "Faber GTAA: five sleeves each timed by 10-month SMA",
+    "family": "tactical_asset_allocation",
+    "rule": "Five sleeves at 20% each (Nifty 50, Next 50 or Midcap 150, gold, gilt, Nasdaq 100 or silver ETF). On the last trading day of each month, per sleeve: if close > SMA of last 10 month-end closes hold the ETF, else hold liquid ETF. Trade at close or next open. Rebalance a sleeve only on signal flip or when its weight leaves 15-25%.",
+    "params": {
+      "n_sleeves": 5,
+      "sleeve_weight": 0.2,
+      "sma_months": 10,
+      "sma_months_range": [
+        3,
+        12
+      ],
+      "rebalance_band": [
+        0.15,
+        0.25
+      ],
+      "cash_asset": "liquid ETF"
+    },
+    "instruments": "NIFTYBEES, JUNIORBEES or MID150BEES, GOLDBEES, LTGILTBEES or GILT5YBEES, MON100 or SILVERBEES; liquid ETF",
+    "holding_period": "months per sleeve; 3-4 portfolio round trips per year in the source",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": false,
+    "reported_performance": "US-centric five asset classes 1973-2012: volatility about 7%, max drawdown reduced from 46% to under 10%, about 70% invested on average, 2006-2012 out of sample (Faber). Quantpedia lists 11.27% p.a., vol 6.87%, Sharpe 1.06 for 1973-2008 with a -29.43% drawdown figure that conflicts with Faber's text. Excludes taxes, commissions, slippage. No Indian backtest found.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Five Rs 30,000 sleeves keep brokerage at the Rs 20 cap (about 0.26% per sleeve round trip incl. DP charge). Needs band rebalancing to avoid small sells; gilt/liquid gains taxed at slab; MON100 premium to NAV must be filtered.",
+    "sources": [
+      "https://mebfaber.com/wp-content/uploads/2016/05/SSRN-id962461.pdf",
+      "https://quantpedia.com/strategies/asset-class-trend-following",
+      "https://www.moneyworks4me.com/investmentshastra/time-the-market-or-asset-allocation/",
+      "https://www.angelone.in/exchange-transaction-charges"
+    ]
+  },
+  {
+    "id": "trend_timing__faber_gtaa_aggressive_topn",
+    "name": "Faber GTAA Aggressive: top-N blended momentum with 10-month SMA gate",
+    "family": "tactical_asset_allocation",
+    "rule": "Month-end: for each ETF in the universe compute score = mean of 1, 3, 6 and 12-month total returns. Select the top N by score. For each selected ETF allocate 1/N if its close > its 10-month SMA, otherwise put that 1/N in liquid ETF. Hold one month and repeat.",
+    "params": {
+      "top_n": 3,
+      "top_n_source": [
+        3,
+        6
+      ],
+      "universe_size_source": 13,
+      "lookbacks_months": [
+        1,
+        3,
+        6,
+        12
+      ],
+      "sma_months": 10
+    },
+    "instruments": "8-10 NSE ETFs: NIFTYBEES, JUNIORBEES, MID150BEES, smallcap ETF, BANKBEES, ITBEES, GOLDBEES, SILVERBEES, LTGILTBEES, MON100; liquid ETF",
+    "holding_period": "1 to several months per holding",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "Faber shows Aggressive (top 6 and top 3 of 13 assets) with higher returns than GTAA Moderate over 1973-2012, gross of costs and taxes; exact figures are in an image not extractable. No Indian backtest found.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Top 3 gives Rs 50,000 positions at the Rs 20 brokerage cap. Higher turnover than GTAA 5 so more short-term tax; Indian universe is dominated by correlated equity ETFs.",
+    "sources": [
+      "https://mebfaber.com/wp-content/uploads/2016/05/SSRN-id962461.pdf"
+    ]
+  },
+  {
+    "id": "trend_timing__tsmom_12m_vol_scaled",
+    "name": "Time-series momentum, 12-month sign with volatility scaling",
+    "family": "time_series_momentum",
+    "rule": "Month-end, per asset: r12 = 12-month return minus liquid return. sigma = annualised EWMA volatility of daily returns (centre of mass 60 days, lagged one day). Weight = (1/N) * min(1, target_vol / sigma) if r12 > 0 else 0 (original: long or short futures at 40% / sigma). Remainder in liquid ETF. Hold one month.",
+    "params": {
+      "lookback_months": 12,
+      "hold_months": 1,
+      "vol_com_days": 60,
+      "annualisation_days": 261,
+      "target_vol_original": 0.4,
+      "target_vol_india_placeholder": 0.15,
+      "max_weight_per_asset": "1/N",
+      "allow_short": false
+    },
+    "instruments": "4-8 NSE ETFs across equity, gold, silver, gilt; liquid ETF (original: 58 futures)",
+    "holding_period": "1 month, positions usually persist for many months",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "strong_academic",
+    "india_evidence": true,
+    "reported_performance": "58 futures Jan 1985-Dec 2009: positive for every contract, diversified Sharpe above 1, alpha about 1.58% a month, gross (Moskowitz, Ooi, Pedersen). 67 markets 1880-2013 with 1/3/12-month blend: 11.2% net of 2-and-20, vol 9.7%, Sharpe 0.77 (Hurst et al.). India: BSE stocks 1996-2020 long-short show substantial absolute momentum with occasional severe losses (Singh et al. 2022, abstract). No Nifty-futures study found.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Only a long-or-flat ETF version fits; the published edge relies on dozens of futures, shorting and leverage. Nifty futures lot (65) is about 11x the account.",
+    "sources": [
+      "https://pages.stern.nyu.edu/~lpederse/papers/TimeSeriesMomentum.pdf",
+      "https://www.trendfollowing.com/whitepaper/Century_Evidence_Trend_Following.pdf",
+      "https://quantpedia.com/strategies/time-series-momentum-effect",
+      "https://ideas.repec.org/a/eme/jefasp/jefas-08-2021-0159.html",
+      "https://www.angelone.in/news/market-updates/nse-revises-lot-sizes-for-index-derivatives-from-december-2025-nifty-lot-size-to-reduce-to-65"
+    ]
+  },
+  {
+    "id": "trend_timing__multi_horizon_trend_blend",
+    "name": "Multi-horizon trend blend with graded exposure (1, 3, 12 months)",
+    "family": "time_series_momentum",
+    "rule": "Month-end, per asset: k = number of lookbacks in {1, 3, 12 months} where the asset's return exceeds the liquid return. Target exposure = k/3 of that asset's sleeve, rest in liquid ETF. Original (Hurst et al.) goes long or short each market per lookback at equal risk and scales the portfolio to 10% volatility. Trade only when k changes.",
+    "params": {
+      "lookbacks_months": [
+        1,
+        3,
+        12
+      ],
+      "exposure_steps": [
+        0,
+        0.3333,
+        0.6667,
+        1.0
+      ],
+      "portfolio_vol_target_original": 0.1,
+      "allow_short": false
+    },
+    "instruments": "NIFTYBEES (optionally GOLDBEES as a second sleeve); liquid ETF",
+    "holding_period": "weeks to months",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "strong_academic",
+    "india_evidence": false,
+    "reported_performance": "67 markets, Jan 1880-Dec 2013, long-short, after estimated transaction costs: 14.9% gross of fees, 11.2% net of 2-and-20, vol 9.7%, net Sharpe 0.77, zero correlation to US equities (Hurst, Ooi, Pedersen). The long-only graded ETF form is the researcher's adaptation with no published backtest.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "With one or two ETFs each exposure step is a Rs 25,000-50,000 order at capped brokerage. The 1-month leg adds whipsaw and short-term tax.",
+    "sources": [
+      "https://www.trendfollowing.com/whitepaper/Century_Evidence_Trend_Following.pdf"
+    ]
+  },
+  {
+    "id": "trend_timing__absolute_momentum_equity_vs_cash",
+    "name": "Absolute momentum: equity vs cash (12-month / 6-month / 200-day)",
+    "family": "absolute_momentum",
+    "rule": "Month-end: if the index ETF total return over the lookback (12 months; variants 6 months, 200 trading days) exceeds the liquid or debt proxy return over the same window, hold the index ETF 100%; otherwise hold liquid or gilt ETF 100%. Trade at next open. Review monthly only.",
+    "params": {
+      "lookback_months": 12,
+      "lookback_variants": [
+        "6m",
+        "200d"
+      ],
+      "review": "monthly",
+      "cash_asset": "liquid ETF"
+    },
+    "instruments": "NIFTYBEES and liquid or gilt ETF",
+    "holding_period": "months; about 12-13 equity exits per 15 years for the 6-month rule",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "India: Nifty, all rolling 15/10/5-year SIP windows, 6-month equity-vs-debt rule with 20% tax haircut: higher risk, sometimes higher return; over 5 years a coin toss (freefincal). Global support is the time-series momentum literature (Moskowitz et al. 1985-2009). Antonacci defines it as 12-month return in excess of T-bills, checked monthly.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Single whole-account switch about once a year; cost about 0.07% per round trip. Short-term tax on exits is the main drag.",
+    "sources": [
+      "https://www.optimalmomentum.com/global-equities-momentum/",
+      "https://www.optimalmomentum.com/research/",
+      "https://freefincal.com/nifty-momentum/",
+      "https://momentumlab.substack.com/p/backtesting-dual-momentum-strategy",
+      "https://pages.stern.nyu.edu/~lpederse/papers/TimeSeriesMomentum.pdf"
+    ]
+  },
+  {
+    "id": "trend_timing__dual_momentum_gem_india",
+    "name": "Dual momentum, Indian edition (Nifty / gold / debt)",
+    "family": "dual_momentum",
+    "rule": "Month-end: compute 12-month returns of Nifty ETF (N), gold ETF (G) and debt proxy (D). If N < D hold debt or liquid ETF. Else hold whichever of N and G is higher. Variant: 200-day returns; hold N if N > G and N > D; hold G if G > N and G > D; else D. One asset, 100% of capital.",
+    "params": {
+      "lookback_months": 12,
+      "lookback_variant_days": 200,
+      "risk_assets": [
+        "NIFTYBEES",
+        "GOLDBEES"
+      ],
+      "safe_asset": "liquid or gilt ETF",
+      "review": "monthly"
+    },
+    "instruments": "NIFTYBEES, GOLDBEES, liquid or gilt ETF",
+    "holding_period": "months to years",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "India: Dec 1996-Jan 2024, 14.0% CAGR vs 12.4% Nifty 50; drawdown about 21% vs over 50% in 2008 and about 11% vs about 30% in 2020; no costs or taxes (Samasthiti). 2014-2024 with 200-day lookbacks: 18.79% CAGR vs 12.13% Nifty, max DD -11.42% vs -34.00%, no costs (MomentumLab). US original GEM figures exclude costs and taxes (Antonacci).",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Three liquid ETFs, one whole-account order per switch, very low turnover. Gold gains under 12 months and all debt gains taxed at slab rate.",
+    "sources": [
+      "https://samasthiti.substack.com/p/indian-edition-of-the-dual-momentum",
+      "https://momentumlab.substack.com/p/backtesting-dual-momentum-strategy",
+      "https://www.optimalmomentum.com/global-equities-momentum/",
+      "https://optimalmomentum.com/faq/"
+    ]
+  },
+  {
+    "id": "trend_timing__paired_switching_nifty_gold",
+    "name": "Paired switching: stronger of Nifty and gold, always invested",
+    "family": "relative_momentum",
+    "rule": "Two assets, Nifty ETF and gold ETF, no cash leg. At each review (monthly with 12-month lookback, or quarter-end with 3-month lookback) hold 100% in whichever has the higher lookback return. Switch at next open only when the leader changes.",
+    "params": {
+      "lookback_months": 12,
+      "review": "monthly",
+      "variant": {
+        "lookback_months": 3,
+        "review": "quarterly"
+      }
+    },
+    "instruments": "NIFTYBEES and GOLDBEES",
+    "holding_period": "months to years; 23 trades in 17 years in the Capitalmind test",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "India: 2005 to mid-2022, Rs 1 lakh to Rs 8.4 lakh vs Rs 7.7 lakh for Nifty buy-hold with lower volatility, 23 trades (Capitalmind). Forum post, about 14 years of EOD data via ChatGPT, 3-month quarterly: 16.06% CAGR, max DD -23.51% vs NIFTYBEES 11.93%, -55.15%; internally inconsistent, anecdotal (TradingQnA).",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Two liquid ETFs and rare whole-account switches. No cash filter, so both can fall together.",
+    "sources": [
+      "https://premium.capitalmind.in/2022/06/should-gold-be-in-your-long-term-portfolio/",
+      "https://tradingqna.com/raw/174470"
+    ]
+  },
+  {
+    "id": "trend_timing__accelerating_dual_momentum",
+    "name": "Accelerating Dual Momentum (1/3/6-month score)",
+    "family": "dual_momentum",
+    "rule": "Month-end: score = sum of 1, 3 and 6-month total returns for each of two equity ETFs. If the best score > 0 hold that ETF 100%. If both scores <= 0 hold the defensive asset: long gilt ETF, or whichever of long gilt and gold or liquid ETF has the higher 1-month return. Hold until next month-end.",
+    "params": {
+      "lookbacks_months": [
+        1,
+        3,
+        6
+      ],
+      "equity_pair": [
+        "NIFTYBEES",
+        "MID150BEES"
+      ],
+      "defensive": [
+        "LTGILTBEES",
+        "GOLDBEES"
+      ],
+      "defensive_lookback_months": 1
+    },
+    "instruments": "NIFTYBEES plus MID150BEES, JUNIORBEES or MON100; LTGILTBEES, GOLDBEES or liquid ETF",
+    "holding_period": "1 to several months",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "US funds 1998-Feb 2018, no costs: USD 10,000 to 426,408 vs under 40,000 for S&P 500, max DD about 20% (author, parameters chosen on the same data). 1990 onward net of costs: highest volatility of any strategy tracked and much worse on non-month-end trading days (Allocate Smartly). No Indian backtest.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "One position, whole-account switches. Faster signal means more switches and more short-term tax; overfitting and timing-luck flags.",
+    "sources": [
+      "https://engineeredportfolio.com/2018/05/02/accelerating-dual-momentum-investing/",
+      "https://allocatesmartly.com/taa-strategy-accelerating-dual-momentum/"
+    ]
+  },
+  {
+    "id": "trend_timing__protective_asset_allocation",
+    "name": "Protective Asset Allocation (PAA)",
+    "family": "breadth_momentum_allocation",
+    "rule": "Month-end: MOM_i = close / SMA(13 month-end closes incl. current) - 1 for N risky ETFs. n = count(MOM > 0). BF = (N - n) / (N - pf*N/4), clipped to 0..1, pf = 2. Put BF in the safe ETF with higher MOM. Split 1 - BF equally among the top T risky ETFs that have MOM > 0.",
+    "params": {
+      "sma_lookback_months": 12,
+      "protection_factor": 2,
+      "protection_factor_range": [
+        0,
+        1,
+        2
+      ],
+      "N_source": 12,
+      "top_T_source": 6,
+      "N_india": 8,
+      "top_T_india": 3
+    },
+    "instruments": "8 NSE ETFs (equity broad and sector, gold, silver, long gilt, MON100); safe: liquid ETF or GILT5YBEES",
+    "holding_period": "monthly review; mixed risky and safe holdings",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "12 global asset proxies, Dec 1970-Dec 2015, simulated monthly data, no costs or taxes: one-year rolling win rate above 95% (Keller and Keuning, co-author blog). Out-of-sample 1993-2015 figure of 10.4% vs 8.2% for 60/40 is from a search snippet only. No Indian backtest.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Several holdings plus a variable bond fraction create Rs 12,500-50,000 slices and small monthly resizes that pay the Rs 5 minimum and Rs 23.60 DP fee; needs T of 2-3 and a no-trade band.",
+    "sources": [
+      "https://indexswingtrader.blogspot.com/2016/04/introducing-protective-asset-allocation.html",
+      "https://www.angelone.in/exchange-transaction-charges"
+    ]
+  },
+  {
+    "id": "trend_timing__vigilant_asset_allocation",
+    "name": "Vigilant Asset Allocation (VAA-G4, 13612W)",
+    "family": "breadth_momentum_allocation",
+    "rule": "Month-end: score = 12*r1 + 4*r3 + 2*r6 + r12 (r_k = k-month return) for 4 offensive and 3 defensive ETFs. If all offensive scores > 0 hold 100% of the top-scoring offensive ETF (T=1) or 50/50 the top two (T=2). If any offensive score <= 0 hold 100% of the top-scoring defensive ETF.",
+    "params": {
+      "weights": {
+        "r1": 12,
+        "r3": 4,
+        "r6": 2,
+        "r12": 1
+      },
+      "top_T": 1,
+      "breadth_B": 1,
+      "top_T_alt": 2
+    },
+    "instruments": "Offensive: NIFTYBEES, MID150BEES, MON100 or GOLDBEES, GILT5YBEES. Defensive: liquid ETF, GILT5YBEES, LTGILTBEES",
+    "holding_period": "1 month; high turnover",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "US and global ETF proxies, 1971 onward net of costs: Sharpe 1.10 and max DD -16.1%, falling to 0.83 and -25.2% without the bond 'spoiler' asset; wide dispersion across trading days (Allocate Smartly). Authors' Dec 1970-Jun 2017 simulation beats GEM, no costs. No Indian backtest.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Single-position whole-account switches are cheap to trade, but near-monthly switching makes almost all gains short-term (20% or slab) and results are sensitive to trade day.",
+    "sources": [
+      "https://indexswingtrader.blogspot.com/2017/07/breadth-momentum-and-vigilant-asset.html",
+      "https://allocatesmartly.com/vigilant-asset-allocation-dr-wouter-keller-jw-keuning/"
+    ]
+  },
+  {
+    "id": "trend_timing__defensive_asset_allocation_canary",
+    "name": "Defensive Asset Allocation with canary universe (DAA)",
+    "family": "breadth_momentum_allocation",
+    "rule": "Month-end: score = 12*r1 + 4*r3 + 2*r6 + r12. Count b = canary assets (2) with score < 0. If b = 2 hold 100% the best cash-universe ETF. If b = 1 hold 50% in the top T/2 risky ETFs equal weight and 50% in the best cash ETF. If b = 0 hold 100% in the top T risky ETFs equal weight.",
+    "params": {
+      "canary_source": [
+        "VWO",
+        "BND"
+      ],
+      "canary_india_placeholder": [
+        "Nifty Smallcap 250 index",
+        "gilt index"
+      ],
+      "breadth_B": 2,
+      "top_T_source": 6,
+      "top_T_india": 2
+    },
+    "instruments": "Risky: 6-8 NSE ETFs. Cash universe: liquid ETF, GILT5YBEES, LTGILTBEES. Canary: small/mid-cap index and gilt index (untested substitutes)",
+    "holding_period": "monthly",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "Four global universes 1971-2018, simulated monthly data, no costs: average cash fraction below 30% vs nearly 60% for VAA with similar return and risk and lower turnover; canary pair chosen by optimisation on 1925-1970 (Keller and Keuning, co-author blog). No Indian backtest.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "With T of 2-3 positions are Rs 37,500-75,000 at capped brokerage. The canary assets are a fitted choice that may not transfer to India.",
+    "sources": [
+      "https://indexswingtrader.blogspot.com/2018/07/announcing-defensive-asset-allocation.html"
+    ]
+  },
+  {
+    "id": "trend_timing__hybrid_asset_allocation",
+    "name": "Hybrid Asset Allocation (HAA, single canary)",
+    "family": "breadth_momentum_allocation",
+    "rule": "Month-end: mom = mean of 1, 3, 6 and 12-month total returns. If the canary (TIPS proxy) mom <= 0 hold 100% the better of two defensive ETFs. Else hold the top 4 of 8 offensive ETFs at 25% each (India: top 3), replacing any selected ETF whose mom <= 0 with the best defensive ETF. Rebalance monthly.",
+    "params": {
+      "lookbacks_months": [
+        1,
+        3,
+        6,
+        12
+      ],
+      "canary_source": "TIP",
+      "top_source": 4,
+      "offensive_n_source": 8,
+      "top_india": 3,
+      "defensive_source": [
+        "BIL",
+        "IEF"
+      ]
+    },
+    "instruments": "Offensive: 6-8 NSE ETFs. Defensive: liquid ETF, GILT5YBEES. Canary: US TIP series (external) or an untested Indian substitute",
+    "holding_period": "monthly; about seven trading months a year in the source",
+    "data_needed": [
+      "daily_equity",
+      "daily_index",
+      "other"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "Global ETF proxies over 50-plus years of simulated data, no costs, taxes or risk-free rate: one limited losing year and all rolling 3-year returns positive for the balanced version; authors call the single-asset version a possible 'lucky shot' (Keller and Keuning, co-author blog, 2023). No Indian backtest.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "No Indian inflation-linked bond ETF for the canary, so it needs external data or an untested proxy; monthly full rebalance of 3-4 slices needs bands to avoid small-order fees.",
+    "sources": [
+      "https://indexswingtrader.blogspot.com/2023/02/introducing-hybrid-asset-allocation-haa.html"
+    ]
+  },
+  {
+    "id": "trend_timing__donchian_channel_breakout",
+    "name": "Donchian channel breakout (20-day / 55-day)",
+    "family": "breakout_trend",
+    "rule": "Daily: upper = highest close of the prior N days (20 or 55); lower = lowest close of the prior M days (20, or 10/20). If flat and close > upper, buy at next open. If long and close < lower, sell at next open to liquid ETF. Long-only on ETFs; the stop-and-reverse form shorts below lower.",
+    "params": {
+      "entry_N": 20,
+      "exit_M": 20,
+      "entry_N_range": [
+        20,
+        55,
+        100
+      ],
+      "exit_M_range": [
+        10,
+        20,
+        40
+      ],
+      "allow_short": false
+    },
+    "instruments": "NIFTYBEES, GOLDBEES, SILVERBEES, MID150BEES; liquid ETF",
+    "holding_period": "weeks to months",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "negative",
+    "india_evidence": true,
+    "reported_performance": "India: Nifty spot daily, Jan 2015-Oct 2025, 20-day channel, no costs: 'fails badly'; negative median trade in long-short, long-only and short-only; long-only spent 5 years in drawdown (Zerodha, S. Rao). Untested on gold, silver and mid-cap ETFs.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Long-only ETF version is easy to run, but the only Indian test on Nifty is negative before costs.",
+    "sources": [
+      "https://tradingqna.com/raw/188234",
+      "https://oxfordstrat.com/coasdfASD32/uploads/2016/01/turtle-rules.pdf"
+    ]
+  },
+  {
+    "id": "trend_timing__turtle_system_atr_units",
+    "name": "Turtle system (ATR units, pyramiding, 2N stop)",
+    "family": "breakout_trend",
+    "rule": "N = 20-day Wilder-style average true range. Unit = 1% of equity / N (capped by cash). Enter on 20-day high breakout (skip if the prior breakout won; then use 55-day) or on 55-day breakout. Add a unit every 0.5N up to 4. Stop 2N below last fill. Exit on 10-day low (system 1) or 20-day low (system 2).",
+    "params": {
+      "atr_days": 20,
+      "risk_per_unit": 0.01,
+      "s1_entry": 20,
+      "s1_exit": 10,
+      "s2_entry": 55,
+      "s2_exit": 20,
+      "add_step_N": 0.5,
+      "max_units_per_market": 4,
+      "stop_N": 2,
+      "max_units_one_direction": 12
+    },
+    "instruments": "4-6 NSE ETFs long-only (original: leveraged futures in 20-plus markets)",
+    "holding_period": "weeks to months",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "anecdotal",
+    "india_evidence": false,
+    "reported_performance": "The Original Turtle Trading Rules document gives rules only, no audited performance. Related Indian evidence: 20-day Donchian on Nifty daily 2015-2025 fails (Zerodha, S. Rao).",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "One unit of an index ETF (daily ATR about 0.8% of price) is about 1.25x equity, so without futures leverage pyramiding is impossible and the system collapses to a single-unit breakout; Nifty futures lot is about 11x the account.",
+    "sources": [
+      "https://oxfordstrat.com/coasdfASD32/uploads/2016/01/turtle-rules.pdf",
+      "https://tradingqna.com/raw/188234",
+      "https://www.angelone.in/news/market-updates/nse-revises-lot-sizes-for-index-derivatives-from-december-2025-nifty-lot-size-to-reduce-to-65"
+    ]
+  },
+  {
+    "id": "trend_timing__keltner_donchian_sector_timing",
+    "name": "Keltner plus Donchian channel timing on sectors (Zarattini and Antonacci)",
+    "family": "breakout_trend",
+    "rule": "Daily per sector: Upper = min(20-day high close, EMA20 + 2.8*avg|dP|20). Lower = max(40-day low close, EMA40 - 2.8*avg|dP|40). Enter long if close >= yesterday's Upper. Trailing stop = max(prior stop, Lower); exit when close falls below it. Weight = (1.5%/N) / 14-day daily volatility, total capped (200% original, 100% India).",
+    "params": {
+      "entry_days": 20,
+      "exit_days": 40,
+      "keltner_k": 2,
+      "atr_factor": 1.4,
+      "vol_days": 14,
+      "portfolio_daily_vol_target": 0.015,
+      "max_exposure_source": 2.0,
+      "max_exposure_india": 1.0,
+      "rebalance": "daily (India: weekly with band)"
+    },
+    "instruments": "8-12 Nifty sector indices for signals; BANKBEES, ITBEES, PSUBNKBEES, PHARMABEES, AUTOBEES, INFRABEES and similar for execution; liquid ETF",
+    "holding_period": "weeks to months per sector",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": false,
+    "reported_performance": "48 US industry portfolios 1926-2024, no costs, leverage up to 200%: 18.2% p.a., vol 12.6%, Sharpe 1.39 vs market 9.7%, 17.1%, 0.63; drawdown cut by almost 60%. Replicated on 31 sector ETFs Jan 2005-Mar 2024 with USD 0.0035 per share commission (Zarattini and Antonacci, 2025 Dow Award). No Indian backtest.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Daily vol-target resizing across about ten small positions is punished by the Rs 5 minimum brokerage and Rs 23.60 DP fee per sell; sector ETFs are thin; no leverage. Needs fewer sectors and weekly band rebalancing.",
+    "sources": [
+      "https://cmtassociation.org/wp-content/uploads/2025/10/2025-DowWinner_A-Century-of-Profitable-Trends.pdf",
+      "https://www.optimalmomentum.com/research/",
+      "https://www.angelone.in/exchange-transaction-charges"
+    ]
+  },
+  {
+    "id": "trend_timing__supertrend_long_only",
+    "name": "Supertrend (10,3) long-only on Nifty and gold",
+    "family": "volatility_band_trend",
+    "rule": "Supertrend(ATR 10, multiplier 3) on daily bars of the index. If flat and a bar closes above the Supertrend line, buy the ETF at next open. If long and a bar closes below the line, sell at next open and hold liquid ETF. Long-only. Two-asset form: run independently on Nifty and gold ETFs at 50% each.",
+    "params": {
+      "atr_period": 10,
+      "multiplier": 3,
+      "timeframe": "1D",
+      "timeframes_tested": [
+        "1D",
+        "4H",
+        "1H"
+      ],
+      "weights": {
+        "NIFTYBEES": 0.5,
+        "GOLDBEES": 0.5
+      }
+    },
+    "instruments": "NIFTYBEES and GOLDBEES; liquid ETF (source tested Nifty spot and MCX GoldM futures)",
+    "holding_period": "daily bars: about 3 months per trade (44 long trades in 10.8 years); hourly: shorter",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "India: Nifty daily Jan 2015-Oct 2025 long-only, 44 trades averaging 270 points vs 256 trades at 35 points for an 8-EMA rule. 1-hour Nifty plus GoldM 50:50, about 11 years to Nov 2025, unlevered, uncompounded: 187% cumulative, max DD 6.6% vs buy-hold Nifty 214% with 38% DD and GoldM 161% with 21% DD; costs not stated (Zerodha, S. Rao). Hourly version needs intraday data.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Daily ETF version needs two Rs 75,000 positions and few trades. The futures version in the source needs about Rs 15.75 lakh for one lot each at 2x and is not feasible.",
+    "sources": [
+      "https://tradingqna.com/raw/188483",
+      "https://tradingqna.com/raw/188767"
+    ]
+  },
+  {
+    "id": "trend_timing__volatility_targeting_overlay",
+    "name": "Volatility targeting overlay (capped at 100% exposure)",
+    "family": "volatility_targeting",
+    "rule": "Weekly: sigma = annualised realised volatility of daily returns (20-60 days, or EWMA with centre of mass 60 days). Target exposure = min(1, target_vol / sigma) in the equity ETF, rest in liquid ETF. Trade only if target differs from current exposure by more than the band (10 percentage points).",
+    "params": {
+      "target_vol": 0.14,
+      "target_vol_range": [
+        0.1,
+        0.2
+      ],
+      "vol_window_days": 40,
+      "vol_window_range": [
+        14,
+        63
+      ],
+      "max_exposure": 1.0,
+      "rebalance_band": 0.1,
+      "review": "weekly"
+    },
+    "instruments": "NIFTYBEES (or any strategy's risky leg) and liquid ETF",
+    "holding_period": "continuous with partial resizing",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "strong_academic",
+    "india_evidence": false,
+    "reported_performance": "60-plus assets, US equities from 1926: vol scaling raises Sharpe for equities and credit, negligible for bonds, FX, commodities, and thins the left tail (Harvey et al., Man Group). 103 equity strategies: real-time volatility-managed versions generally earn lower Sharpe and certainty-equivalent return than unmanaged ones (Cederburg et al. 2020 via Alpha Architect). No Indian study found.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Works as a risk cap with wide bands; without leverage it can only reduce exposure, so it is a drawdown control and not a return source. Frequent small resizes are costly at this size.",
+    "sources": [
+      "https://www.man.com/maninstitute/the-impact-of-volatility-targeting",
+      "https://alphaarchitect.com/does-portfolio-timing-based-on-volatility-signals-outperform-buy-and-hold/",
+      "https://pages.stern.nyu.edu/~lpederse/papers/TimeSeriesMomentum.pdf",
+      "https://valuelytica.substack.com/p/golden-dual-momentum-rotation"
+    ]
+  },
+  {
+    "id": "trend_timing__sector_momentum_rotation",
+    "name": "Sector momentum rotation (top 3 by 12-month return)",
+    "family": "relative_momentum",
+    "rule": "Month-end: rank sector indices by trailing 12-month return (variants 1, 3, 6, 9 months or their average). Hold the top 3 sector ETFs equal weight for one month. Optional filter: hold a selected sector only if it is above its 10-month SMA, otherwise liquid ETF for that slice.",
+    "params": {
+      "lookback_months": 12,
+      "lookback_variants": [
+        1,
+        3,
+        6,
+        9,
+        12
+      ],
+      "top_n": 3,
+      "top_n_india": 2,
+      "trend_filter_sma_months": 10,
+      "rebalance": "monthly"
+    },
+    "instruments": "Nifty sector indices for ranking; BANKBEES, PSUBNKBEES, ITBEES, PHARMABEES, AUTOBEES, INFRABEES, CONSUMBEES and similar; liquid ETF",
+    "holding_period": "1 month, often several",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": false,
+    "reported_performance": "US sectors 1928-2009, top 3 by 12-month return: 13.94% p.a., vol 18.38%, max DD -46.29%, Sharpe 0.54, about 4 points above buy-hold, gross of costs and taxes, turnover 100-400% (Faber via Quantpedia). India: an unsourced web page claims about 14% vs 12% since 2010 for a 3-month sector tilt; not verifiable.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Two or three Rs 50,000-75,000 positions are affordable, but Indian sector ETFs are thin with wide spreads, several sectors lack an ETF, and high turnover makes nearly all gains short-term.",
+    "sources": [
+      "https://quantpedia.com/strategies/sector-momentum-rotational-system",
+      "https://sensexiq.vercel.app/learn/sector-rotation-india"
+    ]
+  },
+  {
+    "id": "trend_timing__asset_class_relative_strength_rotation",
+    "name": "Asset-class relative-strength rotation (top N)",
+    "family": "relative_momentum",
+    "rule": "Month-end: for each ETF in a multi-asset universe compute score = mean of 1, 3, 6 and 12-month returns (or 12-month only). Hold the top N (2-3) equal weight. If a selected asset's score <= 0 put its slice in liquid ETF. Rebalance monthly; trade only on membership change.",
+    "params": {
+      "lookbacks_months": [
+        1,
+        3,
+        6,
+        12
+      ],
+      "top_n": 2,
+      "top_n_source": 3,
+      "absolute_filter": true,
+      "rebalance": "monthly"
+    },
+    "instruments": "NIFTYBEES, MID150BEES, GOLDBEES, SILVERBEES, LTGILTBEES, MON100; liquid ETF",
+    "holding_period": "1 to several months",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": false,
+    "reported_performance": "Five global asset classes 1973-2009: relative strength works across 1-12 month lookbacks and beats buy-hold in roughly 70% of years, gross of costs and taxes (Faber via Quantpedia; exact figures not captured). Indian Nifty-gold pair results are the two-asset special case.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Two Rs 75,000 positions at capped brokerage; low trade count if traded only on membership change. Universe is small and equity-heavy; MON100 premium must be filtered.",
+    "sources": [
+      "https://quantpedia.com/strategies/asset-class-momentum-rotational-system"
+    ]
+  },
+  {
+    "id": "trend_timing__risk_on_off_gold_switch",
+    "name": "Risk-on/risk-off switch to gold on a Nifty trend filter",
+    "family": "regime_filter",
+    "rule": "Weekly: compute Supertrend(10,3) on weekly Nifty 50 bars (variant: 200-day SMA). If the Nifty weekly close is above the line hold the risk-on asset (midcap or momentum ETF, or a stock basket) 100%. If below, sell all and hold gold ETF 100% until Nifty closes back above the line.",
+    "params": {
+      "filter": "weekly Supertrend(10,3) on Nifty 50",
+      "filter_variant": "200-day SMA",
+      "risk_on": "MID150BEES",
+      "risk_off": "GOLDBEES",
+      "review": "weekly"
+    },
+    "instruments": "MID150BEES or JUNIORBEES or a momentum-index ETF; GOLDBEES; Nifty 50 index for the filter",
+    "holding_period": "months",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "anecdotal",
+    "india_evidence": true,
+    "reported_performance": "India forum backtest 2018-Feb 2026 on a mid/small-cap momentum stock basket with this filter, gross, no tax or slippage: about 38% CAGR, max DD -20.9% vs Nifty -34%, Sharpe 1.51. Another member reports a similar strategy at 54% CAGR over 10 years but 12% over 20 years after tax and costs (ValuePickr).",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "ETF form is a whole-account switch a few times a decade. Evidence is one forum post over eight years with strong period dependence.",
+    "sources": [
+      "https://forum.valuepickr.com/raw/218153"
+    ]
+  },
+  {
+    "id": "trend_timing__drawdown_from_high_exit",
+    "name": "Exit when 20% below all-time or 52-week high",
+    "family": "market_timing",
+    "rule": "Daily: ref = all-time high close (variant: 52-week high close). If index close < 0.8 * ref, sell the index ETF and hold liquid ETF. Re-enter when close >= 0.8 * ref. Negative evidence; include only as a baseline to beat.",
+    "params": {
+      "threshold": 0.2,
+      "reference": "all_time_high",
+      "reference_variant": "52_week_high"
+    },
+    "instruments": "NIFTYBEES and liquid ETF",
+    "holding_period": "years in, months out",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "negative",
+    "india_evidence": true,
+    "reported_performance": "India: Nifty with liquid fund, about 21-22 years, before tax and brokerage: all-time-high rule 8.9% CAGR vs 13.7% buy-hold; 52-week-high rule 9.6% vs 14% (MoneyWorks4me).",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Trivial to run, but the only Indian test shows it loses 4-5 points a year to buy-and-hold.",
+    "sources": [
+      "https://www.moneyworks4me.com/investmentshastra/time-the-market-or-asset-allocation/"
+    ]
+  },
+  {
+    "id": "trend_timing__index_futures_long_short_trend",
+    "name": "Long-short trend following on Nifty futures (EMA or Supertrend stop-and-reverse)",
+    "family": "futures_trend",
+    "rule": "Always in the market on Nifty futures. EMA form: long when a bar closes above the EMA (8 daily, 21 four-hour, 50 hourly), short when it closes below; reverse at next bar open. Supertrend(10,3) form: long above the band, short below. One lot; roll before expiry.",
+    "params": {
+      "ema_daily": 8,
+      "ema_4h": 21,
+      "ema_1h": 50,
+      "supertrend": [
+        10,
+        3
+      ],
+      "lot_size": 65,
+      "allow_short": true
+    },
+    "instruments": "Nifty 50 index futures (lot 65)",
+    "holding_period": "days to weeks",
+    "data_needed": [
+      "daily_index",
+      "daily_fo"
+    ],
+    "evidence": "negative",
+    "india_evidence": true,
+    "reported_performance": "India: Nifty spot Jan 2015-Oct 2025, costs not stated: short side loses on daily bars for both indicators; on 4-hour bars Supertrend shorts lose about 4,000 points and EMA shorts gain about 700; on 1-hour bars EMA shorts gain about 4,700 points vs 1,400 for Supertrend (Zerodha, S. Rao). Intraday bars needed for the versions with a positive short side.",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "One Nifty lot of 65 is about Rs 16.7 lakh notional (about 11x the account) with margin above Rs 1.5 lakh; futures STT is 0.05% on sells since April 2026; the daily short side has negative evidence.",
+    "sources": [
+      "https://tradingqna.com/raw/188483",
+      "https://www.angelone.in/news/market-updates/nse-revises-lot-sizes-for-index-derivatives-from-december-2025-nifty-lot-size-to-reduce-to-65",
+      "https://www.angelone.in/exchange-transaction-charges"
+    ]
+  }
+]

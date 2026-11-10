@@ -219,7 +219,9 @@ def read_bhavcopy(source) -> pd.DataFrame:
     is CE/PE (CA/PA for the American stock options of 2008-2010) or "" for
     futures, value is VAL_INLAKH: lakh of rupees, premium turnover for futures
     and (strike + premium) turnover for options. oi is in units of the
-    underlying, not contracts."""
+    underlying, not contracts. contracts is left as a float: on the eve of
+    a few corporate actions the file restates the day's volume in the new lot
+    and prints fractions (LT on 2013-07-10: 5561.33)."""
     data = Path(source).read_bytes() if isinstance(source, (str, Path)) else bytes(source)
     if data[:2] == b"PK":
         with zipfile.ZipFile(io.BytesIO(data)) as z:
@@ -245,10 +247,12 @@ def read_bhavcopy(source) -> pd.DataFrame:
     keep = df["INSTRUMENT"].notna() & df["SYMBOL"].notna()
     df, num = df[keep], {c: v[keep] for c, v in num.items()}
     text = {c: df[c].str.strip() for c in _TEXT}
-    whole = {c: num[c].round().astype("int64") for c in ("CONTRACTS", "OPEN_INT")}
-    for c in whole:
-        if not np.allclose(whole[c], num[c]) or num[c].isna().any():
-            raise ValueError(f"{c} is not a whole number everywhere")
+    for c in _NUMERIC:
+        if num[c].isna().any():
+            raise ValueError(f"{c} has blanks")
+    oi = num["OPEN_INT"].round().astype("int64")
+    if not np.allclose(oi, num["OPEN_INT"]):
+        raise ValueError("OPEN_INT is not a whole number everywhere")
     right = text["OPTION_TYP"].str.upper().replace({"XX": "", "FF": ""}).fillna("")
     out = pd.DataFrame({
         "date": _dates(text["TIMESTAMP"]),
@@ -259,9 +263,9 @@ def read_bhavcopy(source) -> pd.DataFrame:
         "right": right,
         "open": num["OPEN"], "high": num["HIGH"], "low": num["LOW"],
         "close": num["CLOSE"], "settle": num["SETTLE_PR"],
-        "contracts": whole["CONTRACTS"],
+        "contracts": num["CONTRACTS"],
         "value": num["VAL_INLAKH"],
-        "oi": whole["OPEN_INT"],
+        "oi": oi,
     })
     return out.reset_index(drop=True)
 
@@ -303,6 +307,13 @@ FO_COLUMNS = ["date", "instrument", "expiry", "strike", "right", "open", "high",
               "settle", "contracts", "oi", "lot", "underlying"]
 
 
+def whole_contracts(c: pd.Series) -> pd.Series:
+    """Contracts as integers. The rare fractional figure is rounded, and a
+    traded row never rounds down to zero."""
+    r = c.round()
+    return r.mask((c > 0) & (r == 0), 1).astype("int64")
+
+
 def to_store_rows(raw: pd.DataFrame) -> dict[str, pd.DataFrame]:
     """Split one day's rows into the four outputs, in the store's column
     layout (lot and underlying are added later).
@@ -310,6 +321,7 @@ def to_store_rows(raw: pd.DataFrame) -> dict[str, pd.DataFrame]:
     What is changed relative to the file, and nothing else:
       * instrument is FUT or OPT; right is CE, PE or "" (the file says XX).
       * open/high/low are NaN where no contract traded (the file prints 0).
+      * contracts is rounded to a whole number where the file has a fraction.
       * strike stays 0 for futures, close and settle stay exactly as given,
         including zeros.
     """
@@ -331,7 +343,7 @@ def to_store_rows(raw: pd.DataFrame) -> dict[str, pd.DataFrame]:
             if c in ("open", "high", "low"):
                 v = v.mask(untraded & (v == 0))
             out[c] = v.astype("float32")
-        out["contracts"] = sel["contracts"]
+        out["contracts"] = whole_contracts(sel["contracts"])
         out["oi"] = sel["oi"]
         if name == "STKFUT":
             out["symbol"] = sel["symbol"]
@@ -373,6 +385,11 @@ def parse_year(year: int, root=None, force: bool = False) -> dict:
         if len(stamps) != 1 or pd.Timestamp(stamps[0]) != pd.Timestamp(day):
             problems.append(f"{day}: file is stamped {[str(pd.Timestamp(s).date()) for s in stamps]}; skipped")
             continue
+        frac = raw["contracts"] != raw["contracts"].round()
+        if frac.any():
+            who = sorted(raw.loc[frac, "symbol"].unique())
+            problems.append(f"{day}: {int(frac.sum())} rows with fractional CONTRACTS ({', '.join(who)}); "
+                            f"rounded in the kept rows")
         dup = raw.duplicated(["inst", "symbol", "expiry", "strike", "right"])
         if dup.any():
             problems.append(f"{day}: {int(dup.sum())} duplicate contract rows dropped")

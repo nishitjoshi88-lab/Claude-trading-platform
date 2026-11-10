@@ -30,7 +30,15 @@ from ..data.store import Market
 from .metrics import stats
 from .sim import Plan, SimConfig, simulate
 
-WINDOWS = {"train": ("2005-01-01", "2014-12-31"), "valid": ("2015-01-01", "2021-12-31")}
+# Three kinds of strategy, each with its own data and its own protected period:
+#   daily     NSE cash market, daily bars     holdout 2022 onward
+#   options   index options, daily bars       holdout 2022 onward
+#   intraday  one-minute bars (from 2022)     holdout 2025 onward
+WINDOWS = {
+    "daily": {"train": ("2005-01-01", "2014-12-31"), "valid": ("2015-01-01", "2021-12-31")},
+    "options": {"train": ("2008-01-01", "2014-12-31"), "valid": ("2015-01-01", "2021-12-31")},
+    "intraday": {"train": ("2022-01-01", "2023-12-31"), "valid": ("2024-01-01", "2024-12-31")},
+}
 RESULTS = Path(__file__).resolve().parents[2] / "results" / "research"
 
 
@@ -101,6 +109,7 @@ class Spec:
     subset: str = "cm_liquid"
     cards: tuple[str, ...] = ()
     doc: str = ""
+    kind: str = "daily"                 # "daily", "options" or "intraday"
 
     def trials(self, max_trials: int = 60) -> list[dict]:
         keys = list(self.grid)
@@ -115,13 +124,16 @@ REGISTRY: dict[str, Spec] = {}
 
 
 def register(id: str, family: str, grid: dict[str, list] | None = None,
-             subset: str = "cm_liquid", cards: tuple[str, ...] = ()):
+             subset: str = "cm_liquid", cards: tuple[str, ...] = (), kind: str = "daily"):
     """Decorator. `grid` lists the values to try for each parameter; the first
-    value of each is the default. `cards` are research card ids this implements."""
+    value of each is the default. `cards` are research card ids this implements.
+    `kind` says what the function returns: "daily" a Plan, "options" an
+    OptionPlan, "intraday" an IntradayPlan (and it receives an ICtx)."""
+    assert kind in WINDOWS, kind
     def deco(fn):
         if id in REGISTRY and REGISTRY[id].fn.__module__ != fn.__module__:
             raise ValueError(f"duplicate strategy id {id}")
-        REGISTRY[id] = Spec(id, family, fn, grid or {}, subset, tuple(cards), (fn.__doc__ or "").strip())
+        REGISTRY[id] = Spec(id, family, fn, grid or {}, subset, tuple(cards), (fn.__doc__ or "").strip(), kind)
         return fn
     return deco
 
@@ -184,33 +196,95 @@ def check_lookahead(spec: Spec, ctx: Ctx, params: dict | None = None, n_dates: i
     return problems
 
 
-def run_windows(plan: Plan, ctx: Ctx, cfg: SimConfig, windows: dict | None = None) -> dict:
+def check_lookahead_options(spec: Spec, ctx: Ctx, params: dict | None = None, n_dates: int = 4,
+                            seed: int = 0) -> list[str]:
+    """Option plans can only cheat through their entry signal: re-compute it
+    on data cut off at several dates and compare."""
+    params = params or spec.trials(1)[0]
+    full = spec.fn(ctx, **params)
+    if full.entry_signal is None:
+        return []
+    sig = full.entry_signal.dropna()
+    half = ctx.market.dates[len(ctx.market.dates) // 3]
+    pool = sig.index[(sig.index > half) & (sig.index < ctx.market.dates[-2])]
+    if len(pool) == 0:
+        return ["entry signal is empty in the last two thirds of the sample"]
+    rng = np.random.default_rng(seed)
+    problems = []
+    for d in pool[sorted(rng.choice(len(pool), size=min(n_dates, len(pool)), replace=False))]:
+        part = spec.fn(ctx.truncate(d), **params).entry_signal
+        a = sig.loc[:d].iloc[-3:]
+        b = part.reindex(a.index) if part is not None else None
+        if b is None or not np.allclose(a.to_numpy(dtype=float), b.to_numpy(dtype=float), equal_nan=True):
+            problems.append(f"entry signal up to {d.date()} changes when later data is hidden")
+    return problems
+
+
+def _sim_all(spec: Spec, plan, ctx, cfg) -> dict:
+    """Simulate one plan on every window of its kind. Returns {window: (result, stats)}."""
     out = {}
-    for name, (a, b) in (windows or WINDOWS).items():
-        res = simulate(plan, ctx.market, cfg, start=a, end=b, liq_rank=ctx.liquidity_rank())
+    for name, (a, b) in WINDOWS[spec.kind].items():
+        if spec.kind == "daily":
+            res = simulate(plan, ctx.market, cfg, start=a, end=b, liq_rank=ctx.liquidity_rank())
+        elif spec.kind == "options":
+            from ..options import simulate_options
+            try:
+                vix = ctx.index("close")["INDIA VIX"]
+            except (KeyError, FileNotFoundError):
+                vix = None
+            res = simulate_options(plan, ctx.fo(plan.symbol), cfg, start=a, end=b, vix=vix)
+        else:
+            from ..intraday import simulate_intraday
+            res = simulate_intraday(plan, ctx, cfg, start=a, end=b)
         out[name] = (res, stats(res, cfg.capital))
     return out
 
 
-def evaluate(spec: Spec, ctx: Ctx | None = None, cfg: SimConfig | None = None,
-             max_trials: int = 60, save: bool = True, check: bool = True) -> dict:
+def default_ctx(spec: Spec):
+    if spec.kind == "intraday":
+        from ..intraday import load_ictx
+        return load_ictx()
+    return load_ctx(spec.subset)
+
+
+def default_cfg(spec: Spec):
+    if spec.kind == "options":
+        from ..options import OptionSimConfig
+        return OptionSimConfig()
+    if spec.kind == "intraday":
+        from ..intraday import IntradaySimConfig
+        return IntradaySimConfig()
+    return SimConfig()
+
+
+def run_lookahead(spec: Spec, ctx) -> list[str]:
+    if spec.kind == "intraday":
+        from ..intraday import check_lookahead_intraday
+        return check_lookahead_intraday(spec.fn, ctx, spec.trials(1)[0])
+    if spec.kind == "options":
+        return check_lookahead_options(spec, ctx)
+    return check_lookahead(spec, ctx)
+
+
+def evaluate(spec: Spec, ctx=None, cfg=None, max_trials: int = 60, save: bool = True,
+             check: bool = True) -> dict:
     """Run every parameter set on train and validation; choose on train."""
-    ctx = ctx or load_ctx(spec.subset)
-    cfg = cfg or SimConfig()
+    ctx = ctx if ctx is not None else default_ctx(spec)
+    cfg = cfg or default_cfg(spec)
     t0 = time.time()
     trials, curves = [], {}
     for params in spec.trials(max_trials):
         try:
             plan = spec.fn(ctx, **params)
-            w = run_windows(plan, ctx, cfg)
+            w = _sim_all(spec, plan, ctx, cfg)
         except Exception as e:                      # one bad parameter set must not hide the rest
             trials.append({"params": params, "error": f"{type(e).__name__}: {e}"})
             continue
-        trials.append({"params": params, "mode": plan.mode,
+        trials.append({"params": params, "mode": getattr(plan, "mode", spec.kind),
                        "train": w["train"][1], "valid": w["valid"][1]})
         curves[len(trials) - 1] = {k: v[0].equity for k, v in w.items()}
     good = [(k, t) for k, t in enumerate(trials) if "error" not in t and t["train"].get("orders", 0) >= 10]
-    out = {"id": spec.id, "family": spec.family, "cards": list(spec.cards), "doc": spec.doc,
+    out = {"id": spec.id, "family": spec.family, "kind": spec.kind, "cards": list(spec.cards), "doc": spec.doc,
            "n_trials": len(trials), "trials": trials, "seconds": None}
     if good:
         k, best = max(good, key=lambda kt: kt[1]["train"].get("sharpe", -9))
@@ -222,11 +296,11 @@ def evaluate(spec: Spec, ctx: Ctx | None = None, cfg: SimConfig | None = None,
         if save:
             RESULTS.mkdir(parents=True, exist_ok=True)
             (RESULTS / "curves").mkdir(exist_ok=True)
-            pd.DataFrame({name: c for name, c in curves[k].items()}).to_parquet(
+            pd.concat(curves[k], names=["window", "date"]).to_frame("equity").to_parquet(
                 RESULTS / "curves" / f"{spec.id}.parquet")
     else:
         out["chosen"] = None
-    out["lookahead_problems"] = check_lookahead(spec, ctx) if check else None
+    out["lookahead_problems"] = run_lookahead(spec, ctx) if check else None
     out["seconds"] = round(time.time() - t0, 1)
     if save:
         RESULTS.mkdir(parents=True, exist_ok=True)

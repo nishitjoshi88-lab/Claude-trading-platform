@@ -1,0 +1,755 @@
+[
+  {
+    "id": "mean_reversion__rsi2_pullback_index_etf",
+    "name": "RSI(2) pullback in uptrend on an index ETF (Connors)",
+    "family": "oscillator_pullback",
+    "rule": "Daily bars, one index ETF. If Close > SMA(200) and RSI(2) < entry_level, buy at the close (or next open). Sell at the close when Close > SMA(5); alternatives: RSI(2) > 70, or Close > previous day's High. No price stop; optional time stop after max_hold_days. One position, full allocation.",
+    "params": {
+      "rsi_length": 2,
+      "entry_level": 10,
+      "entry_level_strict": 5,
+      "trend_sma": 200,
+      "exit_sma": 5,
+      "alt_exit_rsi": 70,
+      "max_hold_days": 10
+    },
+    "instruments": "Liquid NSE index ETFs (NIFTYBEES, BANKBEES, JUNIORBEES), delivery; index futures only with much larger capital",
+    "holding_period": "1-7 trading days",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "SPY 1993-c.2025 (QuantifiedStrategies): buy RSI2<10, sell RSI2>80: 0.9% per trade, ~9% a year, max DD 34%, 28% exposure; with SMA200 filter 0.95% per trade, CAGR 6.8%, DD 31%; exit close>yesterday's high: 0.5% per trade, 76% wins, DD 15%. S&P 500 index 1957-2023 (Alvarez): low RSI2 followed by above-average returns only since 1995.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "ETF delivery round trip about 0.07-0.17% at Rs 50k-1.5L (sell STT 0.001%, to confirm on contract note) versus 0.5-0.95% reported gross per trade; 5-15 trades a year; one position; daily data only. Edge on NSE ETFs untested.",
+    "sources": [
+      "https://chartschool.stockcharts.com/table-of-contents/trading-strategies-and-models/trading-strategies/rsi-2",
+      "https://www.quantifiedstrategies.com/rsi-2-strategy/",
+      "https://alvarezquanttrading.com/blog/mean-reversion-vs-trend-following-through-the-years/",
+      "https://articles.stockcharts.com/article/articles-arthurhill-2016-12-systemtrader---testing-and-tweaking-an-rsi-mean-reversion-system-for-spy-qqq-and-ijr/",
+      "https://www.marketcalls.in/nifty-technicals/2-period-rsi-trading-systems-for-nifty.html",
+      "https://www.cxoadvisory.com/?p=2679",
+      "https://www.angelone.in/angel-one-brokerage-charges"
+    ]
+  },
+  {
+    "id": "mean_reversion__rsi2_stock_portfolio",
+    "name": "RSI(2) oversold stock portfolio with position cap",
+    "family": "oscillator_pullback",
+    "rule": "Universe: point-in-time large-cap/F&O stocks with Close > SMA(200) and index > SMA(200). Signal at close: RSI(2) < entry_level and Close < SMA(5). Rank signals by 100-day historical volatility, highest first; skip stocks with a gap down >= 5% in the last 10 days. Buy next open, equal weight, at most max_positions. Sell next open after Close > SMA(5), or after max_hold_days.",
+    "params": {
+      "rsi_length": 2,
+      "entry_level": 5,
+      "trend_sma": 200,
+      "exit_sma": 5,
+      "max_hold_days": 5,
+      "max_positions": 5,
+      "rank_vol_lookback": 100,
+      "gap_filter_pct": 5,
+      "gap_filter_days": 10
+    },
+    "instruments": "Nifty 100/200 or F&O-list stocks, delivery",
+    "holding_period": "1-6 trading days",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "S&P 500 constituents 1996-Nov 2025 (Concretum): 114,189 trades, mean 0.45% per trade, 64% hit rate, but no capped random subsample of 5 trades a day matched that mean. S&P 500 2004-2024, 10 slots (Quantitativo): ~17% a year, Sharpe ~0.87, max DD 34%, +0.36% per trade. Russell 3000 2000-2022 (Alvarez): edge shrinking; negative in 2020 and 2022.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Angel One delivery round trip is 0.46% at Rs 30k (5 slots) and 0.62% at Rs 15k (10 slots) before spread, about equal to the US gross edge per trade; signals cluster in sell-offs so 5 slots miss the best trades; no overnight shorts.",
+    "sources": [
+      "https://concretumgroup.com/opportunity-set-bias-in-mean-reversion-trading-systems/",
+      "https://alvarezquanttrading.com/blog/mean-reversion-check-up-2022/",
+      "https://alvarezquanttrading.com/blog/mean-reversion-entry-at-open-vs-intraday-pullback-vs-confirmation/",
+      "https://alvarezquanttrading.com/blog/internal-bar-strength-for-mean-reversion/",
+      "https://alvarezquanttrading.com/blog/avoiding-gap-trades/",
+      "https://www.quantitativo.com/p/a-different-indicator",
+      "https://www.angelone.in/angel-one-brokerage-charges"
+    ]
+  },
+  {
+    "id": "mean_reversion__oversold_limit_dip_entry",
+    "name": "Oversold setup with next-day limit entry below the close (Alvarez)",
+    "family": "oscillator_pullback",
+    "rule": "Setup at close: liquid stock, Close > SMA(100), RSI(2) < setup_level. Next day place a day-only limit buy limit_pct below the setup close, only for as many names as free slots, ranked by 100-day historical volatility, highest first. Exit at next open after RSI(2) > exit_level or after max_hold_days. No stop.",
+    "params": {
+      "rsi_length": 2,
+      "setup_level": 10,
+      "trend_sma": 100,
+      "limit_pct": 4,
+      "limit_pct_range": "1-5",
+      "exit_level": 50,
+      "max_hold_days": 10,
+      "max_positions": 5
+    },
+    "instruments": "Nifty 100/200 or F&O-list stocks, delivery",
+    "holding_period": "1-10 trading days",
+    "data_needed": [
+      "daily_equity"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "Russell 3000, 2007-Jun 2021 (Alvarez): versus next-open entry, limit entry raised CAR 21%, cut exposure 33% and doubled average profit per trade (relative figures only). 2007-Jun 2018 base version 'really disappointing', low-teens CAR at best, weak 2016-2017.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Fewer fills lowers cost and unfilled orders are free at Angel One, but each filled delivery round trip still costs 0.46-0.62% at Rs 15-30k; fills are adversely selected; untested in India.",
+    "sources": [
+      "https://alvarezquanttrading.com/blog/mean-reversion-entry-at-open-vs-intraday-pullback-vs-confirmation/",
+      "https://alvarezquanttrading.com/blog/rsi2-strategy-double-returns-with-a-simple-rule-change/",
+      "https://alvarezquanttrading.com/blog/avoiding-gap-trades/",
+      "https://www.angelone.in/angel-one-brokerage-charges"
+    ]
+  },
+  {
+    "id": "mean_reversion__connors_r3",
+    "name": "Connors R3 (three falling RSI(2) days)",
+    "family": "oscillator_pullback",
+    "rule": "Daily bars, ETF. Conditions: Close > SMA(200); RSI(2) has fallen three days in a row and the first fall started from below 60; RSI(2) today < 10. Buy at today's close. Sell at the close when RSI(2) > 70. No stop.",
+    "params": {
+      "rsi_length": 2,
+      "trend_sma": 200,
+      "first_drop_below": 60,
+      "entry_level": 10,
+      "exit_level": 70,
+      "falling_days": 3
+    },
+    "instruments": "Liquid NSE index and sector ETFs, delivery",
+    "holding_period": "2-6 trading days",
+    "data_needed": [
+      "daily_equity"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "QuantifiedStrategies, ETF inception to Dec 2020, no costs: SPY 1.28% per trade (Connors to 2008: 1.16%), QQQ 1.04% (1.24%), EEM 0.45% (0.91%), EWH 0.31% (1.18%), XLF 0.26% (0.46%); fewer fills than Connors; several ETFs lost half their edge after publication.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "ETF round trip 0.07-0.17%; a handful of trades a year; too infrequent to stand alone and unverified on NSE ETFs.",
+    "sources": [
+      "https://www.quantifiedstrategies.com/larry-connors-r3-strategy/",
+      "https://www.angelone.in/angel-one-brokerage-charges"
+    ]
+  },
+  {
+    "id": "mean_reversion__percent_b_three_day",
+    "name": "Connors %b (three closes with %b below 0.2)",
+    "family": "band_reversion",
+    "rule": "Daily bars, ETF. %b = (Close - LowerBB) / (UpperBB - LowerBB) with Bollinger(bb_length, bb_width). If Close > SMA(200) and %b < 0.2 on each of the last three days, buy at the close. Sell at the close when %b > 0.8. No stop.",
+    "params": {
+      "bb_length": 5,
+      "bb_length_alt": 10,
+      "bb_width": 1.0,
+      "entry_pctb": 0.2,
+      "exit_pctb": 0.8,
+      "days_below": 3,
+      "trend_sma": 200
+    },
+    "instruments": "Liquid NSE index and sector ETFs, delivery",
+    "holding_period": "2-10 trading days",
+    "data_needed": [
+      "daily_equity"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "QuantifiedStrategies, 20 US ETFs since inception: 677 trades, 75% wins, 0.76% per trade, profit factor 1.9, CAGR 4.84%, max DD 16%, 17% exposure; 10-day lookback CAGR 8.2%. Connors' band settings could not be replicated.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "ETF costs small against 0.76% gross per trade; low exposure; band parameters uncertain so a grid must be tested.",
+    "sources": [
+      "https://www.quantifiedstrategies.com/larry-connors-b-strategy/",
+      "https://alvarezquanttrading.com/blog/the-abcs-of-creating-a-mean-reversion-strategy-part1/",
+      "https://www.angelone.in/angel-one-brokerage-charges"
+    ]
+  },
+  {
+    "id": "mean_reversion__three_day_high_low",
+    "name": "Connors 3-day high/low method",
+    "family": "bar_pattern",
+    "rule": "Daily bars, ETF. Conditions: Close > SMA(200); Close < SMA(5); each of the last three days had a lower High and a lower Low than the day before. Buy at today's close. Sell at the close when Close > SMA(5). No stop.",
+    "params": {
+      "trend_sma": 200,
+      "short_sma": 5,
+      "lower_high_low_days": 3
+    },
+    "instruments": "Liquid NSE index and sector ETFs, delivery",
+    "holding_period": "2-6 trading days",
+    "data_needed": [
+      "daily_equity"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "QuantifiedStrategies, 20 US ETFs, 2000-Nov 2020: 1,616 trades, 0.38% per trade, CAGR 5.74%, profit factor 1.53, max DD 16.4%; 13 of 20 ETFs did worse than in Connors' pre-2009 test.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "ETF round trip 0.07-0.17% versus 0.38% gross per trade leaves a thin margin; simple daily rules; edge decayed after publication.",
+    "sources": [
+      "https://www.quantifiedstrategies.com/larry-connors-3-day-high-low-method/",
+      "https://www.angelone.in/angel-one-brokerage-charges"
+    ]
+  },
+  {
+    "id": "mean_reversion__down_streak_mdd",
+    "name": "N-day down streak / Connors multiple days down",
+    "family": "bar_pattern",
+    "rule": "Daily bars, ETF or liquid stock. If Close > SMA(200), Close < SMA(5) and at least down_days of the last window_days closes were lower than the prior close (variant: streak_days consecutive lower closes), buy at the close. Sell at the close when Close > SMA(5). No stop.",
+    "params": {
+      "trend_sma": 200,
+      "short_sma": 5,
+      "down_days": 4,
+      "window_days": 5,
+      "streak_days": 3
+    },
+    "instruments": "Liquid NSE index and sector ETFs, delivery",
+    "holding_period": "1-6 trading days",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "No opened source gives numbers (QuantifiedStrategies re-test paywalled). Alvarez lists 3-5 consecutive down days as a working pullback measure. Nifty since 1994 (Capitalmind 2011): after 6 straight up closes the next-day expectancy was +0.13% (61 cases), i.e. up streaks continued rather than reversed; no Indian down-streak test found.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Operationally trivial in ETFs with low cost; evidence is weak and the only Indian streak evidence points to continuation.",
+    "sources": [
+      "https://quantifiedstrategies.substack.com/p/larry-connors-multiple-days-up-and-d41",
+      "https://alvarezquanttrading.com/blog/the-abcs-of-creating-a-mean-reversion-strategy-part1/",
+      "https://premium.capitalmind.in/2011/03/continuous-positive-days/"
+    ]
+  },
+  {
+    "id": "mean_reversion__double_seven_n_day_low",
+    "name": "Double Seven / N-day-low dip buying",
+    "family": "bar_pattern",
+    "rule": "Daily bars, index ETF. If Close > SMA(200) and today's Close is the lowest close of the last lookback days, buy at the close. Exit A (Double Seven): sell at the close when Close is the highest close of the last lookback days. Exit B: sell at the first close above the previous close. No stop.",
+    "params": {
+      "trend_sma": 200,
+      "lookback": 7,
+      "lookback_range": "5-10",
+      "exit": "A_or_B"
+    },
+    "instruments": "Liquid NSE index ETFs, delivery",
+    "holding_period": "1-10 trading days",
+    "data_needed": [
+      "daily_equity"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "SPY since 1993 (QuantifiedStrategies): Double Seven 154 trades, 1.18% per trade, 82.5% wins, CAGR 6.3%, max DD 33%, 26% exposure; multi-ETF 1,189 trades, 0.63% per trade, 'almost all gains happened before 2010'. Exit B: 329 trades, 0.52% per trade, 76% wins, CAGR 5.7% vs 9.5% buy and hold.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Few trades and small ETF costs; average losers exceed average winners and capital idles about 75% of the time.",
+    "sources": [
+      "https://www.quantifiedstrategies.com/larry-connors-double-seven-strategy/",
+      "https://www.quantifiedstrategies.com/buy-the-dip-strategy/",
+      "https://alvarezquanttrading.com/blog/the-abcs-of-creating-a-mean-reversion-strategy-part1/"
+    ]
+  },
+  {
+    "id": "mean_reversion__ibs_index_etf",
+    "name": "Internal bar strength (IBS) on an index ETF",
+    "family": "bar_pattern",
+    "rule": "Daily bars, one index ETF. IBS = (Close - Low) / (High - Low). Buy at the close when IBS < buy_level. Sell at the close of the first later day with IBS > sell_level. No stop. Must be filled at or just before the close.",
+    "params": {
+      "buy_level": 0.2,
+      "sell_level": 0.8,
+      "optional_filter": "close <= 1.05 * SMA200",
+      "catastrophe_stop_pct": 10
+    },
+    "instruments": "Liquid NSE index ETFs (NIFTYBEES, BANKBEES, JUNIORBEES), delivery",
+    "holding_period": "1-6 trading days",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": false,
+    "reported_performance": "SPY 1993-c.2025, no costs (QuantifiedStrategies): 919 trades, 0.41% per trade, 68% wins, CAGR 12.5% vs 9.9%, max DD 26%; next-open entry cuts it to 0.31%. US-listed equity ETFs to May 2013 (Pagonidis): +0.35% next day after IBS<0.2, -0.13% after IBS>0.8; little or no effect in locally listed ETFs of seven other markets. No usable evidence on NSE-listed instruments: only US-listed India ETFs (EPI +0.39%/-0.30%) and a Marketcalls Nifty futures test (2007-2014) whose results could not be read.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "About 30 ETF round trips a year at 0.07-0.17% each (2-5% a year) versus 0.3-0.4% gross per trade in the US; one position; depends on executing at the NSE close and on the effect existing locally, which is unproven.",
+    "sources": [
+      "https://www.quantifiedstrategies.com/internal-bar-strength-ibs-indicator-strategy/",
+      "https://www.naaim.org/wp-content/uploads/2014/04/00V_Alexander_Pagonidis_The-IBS-Effect-Mean-Reversion-in-Equity-ETFs-1.pdf",
+      "https://arxiv.org/pdf/2306.12434",
+      "https://www.marketcalls.in/amibroker/internal-bar-strength-mean-reversion-trading-afl-code.html",
+      "https://www.angelone.in/angel-one-brokerage-charges"
+    ]
+  },
+  {
+    "id": "mean_reversion__rsi3_ibs_filter",
+    "name": "RSI(3) pullback with IBS filter (Pagonidis)",
+    "family": "oscillator_pullback",
+    "rule": "Daily bars, index ETF. Cutler RSI(3) uses simple averages of up and down closes. Base state turns on at a close with RSI(3) < 10 and stays on while RSI(3) <= 40. Hold the ETF overnight only on days when the base state is on and IBS <= 0.5; otherwise flat. Orders at the close. No stop.",
+    "params": {
+      "rsi_length": 3,
+      "entry_level": 10,
+      "hold_level": 40,
+      "ibs_max": 0.5
+    },
+    "instruments": "Liquid NSE index ETFs, delivery",
+    "holding_period": "1-5 trading days",
+    "data_needed": [
+      "daily_equity"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": false,
+    "reported_performance": "US-listed equity ETFs to May 2013 (Pagonidis): the IBS filter removed about 43% of days in the market and raised total return by 9.6% on average. QuantifiedStrategies 'IBS + second indicator': SPY 278 trades, 0.8% per trade, 78% wins, max DD 23.75%; QQQ 232 trades, 1.33% per trade.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "ETF implementation, daily data, low cost per trade; more round trips than plain RSI because the IBS filter toggles the position; untested on NSE.",
+    "sources": [
+      "https://www.naaim.org/wp-content/uploads/2014/04/00V_Alexander_Pagonidis_The-IBS-Effect-Mean-Reversion-in-Equity-ETFs-1.pdf",
+      "https://www.quantifiedstrategies.com/internal-bar-strength-ibs-indicator-strategy/"
+    ]
+  },
+  {
+    "id": "mean_reversion__ibs_cross_sectional_basket",
+    "name": "Lowest-IBS rotation across an ETF basket",
+    "family": "cross_sectional_reversal",
+    "rule": "Each day at the close compute IBS for every ETF in the basket. Buy the n_long ETFs with the lowest IBS (optionally only if IBS < max_ibs); hold until the next close, then repeat. Academic version also shorts the highest-IBS ETF. Close-to-close execution only.",
+    "params": {
+      "n_long": 1,
+      "max_ibs": 0.2,
+      "hold_days": 1,
+      "ibs_days": 1
+    },
+    "instruments": "Basket of liquid NSE equity ETFs (broad, bank, next-50, sector), delivery, long-only",
+    "holding_period": "1 trading day",
+    "data_needed": [
+      "daily_equity"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": false,
+    "reported_performance": "15 US-listed country ETFs, 2009-2019, no commissions (Pandey and Joshi): long-short Sharpe 2.9, best baskets 3.7-3.9, long-only leg 1.3-2.0; open-to-open execution gives Sharpe about -0.3 to 0.4.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "About 250 round trips a year: roughly 17% of capital a year in charges at Rs 1.5L per trade and more if split; few liquid Indian ETFs; effect documented only for US-listed ETFs at the US close.",
+    "sources": [
+      "https://arxiv.org/pdf/2306.12434",
+      "https://www.naaim.org/wp-content/uploads/2014/04/00V_Alexander_Pagonidis_The-IBS-Effect-Mean-Reversion-in-Equity-ETFs-1.pdf",
+      "https://www.angelone.in/angel-one-brokerage-charges"
+    ]
+  },
+  {
+    "id": "mean_reversion__bollinger_band_reversion",
+    "name": "Bollinger lower-band reversion",
+    "family": "band_reversion",
+    "rule": "Daily bars. Buy at the close when Close < SMA(bb_length) - bb_width * StdDev(bb_length). Sell at the close when Close > SMA(bb_length). Optional filter Close > SMA(200). No stop in the tested version.",
+    "params": {
+      "bb_length": 10,
+      "bb_length_alt": 20,
+      "bb_width": 2.0,
+      "trend_sma": 200
+    },
+    "instruments": "Index ETFs; liquid stocks",
+    "holding_period": "2-10 trading days",
+    "data_needed": [
+      "daily_equity"
+    ],
+    "evidence": "negative",
+    "india_evidence": false,
+    "reported_performance": "S&P 500 since 1993 (QuantifiedStrategies): trailed buy and hold by a wide margin and 'since 2018 it has been a losing strategy'. Indian and Taiwanese academic tests seen only as search snippets (unverified).",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Executable cheaply in ETFs, but this is the weakest-evidenced rule in the family and has been negative since 2018 in the US; for stocks delivery costs exceed any documented edge.",
+    "sources": [
+      "https://www.quantifiedstrategies.com/bollinger-bands-trading-strategy/",
+      "https://www.quantifiedstrategies.com/larry-connors-b-strategy/"
+    ]
+  },
+  {
+    "id": "mean_reversion__ma_stretch_rubber_band",
+    "name": "Stretch below short moving average / ATR band",
+    "family": "band_reversion",
+    "rule": "Daily bars. If Close > SMA(200) and Close <= SMA(ma_length) * (1 - stretch_pct/100), buy at the close. ATR variant: Close < SMA(ma_length) - atr_mult * ATR(atr_length). Sell at the close when Close > SMA(ma_length). Time stop max_hold_days.",
+    "params": {
+      "ma_length": 5,
+      "stretch_pct": 4,
+      "stretch_pct_range": "3-5",
+      "alt_ma_length": 10,
+      "alt_stretch_pct": 5,
+      "atr_length": 10,
+      "atr_mult": 2.0,
+      "trend_sma": 200,
+      "max_hold_days": 10
+    },
+    "instruments": "Index ETFs; liquid stocks",
+    "holding_period": "2-7 trading days",
+    "data_needed": [
+      "daily_equity"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "QuantifiedStrategies 'rubber band' (Keltner/ATR band, exact settings members-only), SPY: 328 trades, 0.45% per trade, CAGR 6.1%, 20% exposure, profit factor 2, max DD 16%. Alvarez gives the percentage-stretch parameter ranges without statistics.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "ETF version has low cost against 0.45% gross per trade; ATR multiplier and length are assumptions because the source rules are paywalled.",
+    "sources": [
+      "https://www.quantifiedstrategies.com/rubber-band-trading-strategy/",
+      "https://alvarezquanttrading.com/blog/the-abcs-of-creating-a-mean-reversion-strategy-part1/"
+    ]
+  },
+  {
+    "id": "mean_reversion__williams_r_oversold",
+    "name": "Williams %R oversold with strength exit",
+    "family": "oscillator_pullback",
+    "rule": "Daily bars, index ETF. %R(n) = -100 * (HighestHigh_n - Close) / (HighestHigh_n - LowestLow_n). Buy at the close when %R < -90. Sell at the close when Close > previous day's High or %R > -30. No stop.",
+    "params": {
+      "lookback": 2,
+      "lookback_range": "2-25",
+      "entry_level": -90,
+      "exit_level": -30
+    },
+    "instruments": "Liquid NSE index ETFs, delivery",
+    "holding_period": "1-5 trading days",
+    "data_needed": [
+      "daily_equity"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "SPY since 1993 (QuantifiedStrategies): CAGR 11.9% vs 10.3% buy and hold, 22% exposure, 598 trades, 0.6% per trade, max DD 17%, profit factor 2.2; all lookbacks 2-24 had profit factor >= 2.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "About 18 ETF trades a year at 0.07-0.17% each; nearly the same information as IBS/RSI(2), so not an independent strategy.",
+    "sources": [
+      "https://www.quantifiedstrategies.com/williams-r-trading-strategy/"
+    ]
+  },
+  {
+    "id": "mean_reversion__connors_rsi_pullback",
+    "name": "ConnorsRSI pullback",
+    "family": "oscillator_pullback",
+    "rule": "Daily bars. CRSI = (RSI(3) + RSI(streak, 2) + PercentRank(1-day return, 100)) / 3, streak = signed run of up/down closes. If Close > SMA(200) and CRSI < entry_level, buy at the close. Sell at the close when Close > previous day's High or CRSI > exit_level. No stop.",
+    "params": {
+      "rsi_length": 3,
+      "streak_rsi_length": 2,
+      "rank_length": 100,
+      "entry_level": 10,
+      "entry_level_alt": 15,
+      "exit_level": 70,
+      "trend_sma": 200
+    },
+    "instruments": "Index ETFs; liquid stocks",
+    "holding_period": "1-6 trading days",
+    "data_needed": [
+      "daily_equity"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "S&P 500 since 1993 (QuantifiedStrategies), 2-day lookbacks, buy <10, exit close > yesterday's high: 293 trades, 0.5% per trade, 75% wins, 'a few big losing periods'; plain RSI(2) with the same rules did better (385 trades, 0.66%).",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Feasible in ETFs at low cost, but the one opened test shows no advantage over RSI(2); low priority.",
+    "sources": [
+      "https://www.quantifiedstrategies.com/connors-rsi/",
+      "https://alvarezquanttrading.com/blog/the-abcs-of-creating-a-mean-reversion-strategy-part1/"
+    ]
+  },
+  {
+    "id": "mean_reversion__dv2_stock_portfolio",
+    "name": "DV2 (Varadi oscillator) oversold stock portfolio",
+    "family": "oscillator_pullback",
+    "rule": "DV2 = 100 * percent rank over rank_lookback days of SMA2(Close / ((High+Low)/2)). Universe: index members with Close > SMA(200) and 6-month return > 0. If yesterday's DV2 < 10, buy at the open; if signals exceed free slots take highest ATR(14)/Close first; at most max_positions equal slots. Sell at the next open after Close > previous day's High.",
+    "params": {
+      "dv_length": 2,
+      "rank_lookback": 252,
+      "entry_level": 10,
+      "trend_sma": 200,
+      "momentum_days": 126,
+      "max_positions": 5,
+      "source_max_positions": 10
+    },
+    "instruments": "Nifty 100/200 or F&O-list stocks, delivery",
+    "holding_period": "1-5 trading days",
+    "data_needed": [
+      "daily_equity"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "S&P 500 point-in-time, 2004-2024 (Quantitativo): 17.4% a year, Sharpe 0.87, max DD 34%, ~475 trades a year, 64.8% wins, +0.36% per trade; with 6-month filter 20.9% a year, Sharpe 1.01. Returns fall as assumed costs rise.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "At 10 slots, ~475 trades a year cost about Rs 44,000 (29% of capital) at Angel One, more than the reported gross return; only a low-frequency 3-5 slot version is worth testing. Percent-rank lookback not confirmed.",
+    "sources": [
+      "https://www.quantitativo.com/p/a-different-indicator",
+      "https://www.angelone.in/angel-one-brokerage-charges"
+    ]
+  },
+  {
+    "id": "mean_reversion__turnaround_tuesday",
+    "name": "Turnaround Tuesday (buy weak Monday close)",
+    "family": "calendar_reversal",
+    "rule": "Daily bars, index ETF. If today is Monday, Close < Friday's Close and IBS < 0.5, buy at the close. Sell at the close when Close > previous day's High, or 4 trading days after entry. Strict one-day variant: Monday Close <= 0.99 * Friday Close, sell Tuesday's close.",
+    "params": {
+      "weekday": "Monday",
+      "ibs_max": 0.5,
+      "max_hold_days": 4,
+      "strict_drop_pct": 1.0
+    },
+    "instruments": "Liquid NSE index ETFs, delivery; stock-basket variant possible",
+    "holding_period": "1-4 trading days",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "SPY from 1993 with 0.03% costs (QuantifiedStrategies): strict variant 212 trades, 0.3% per trade, CAGR 1.8%, 56% wins; IBS<0.5 with 4-day exit 495 trades, 0.46% per trade, CAGR 7%, 17% exposure, 69% wins. Stock version (StrategyQuant, 20 years, 0.1% commission): Nasdaq 100 CAGR ~10%, S&P 500 ~15%. Disputed by Price Action Lab (paywalled).",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "ETF version makes 7-17 trades a year at negligible cost; the weekday effect is untested on NSE and the plain version's edge is small.",
+    "sources": [
+      "https://www.quantifiedstrategies.com/turnaround-tuesday-strategy/",
+      "https://strategyquant.com/blog/tuesday-reversal-strategy-tested-on-nasdaq-100-and-sp-500-stocks/",
+      "https://www.naaim.org/wp-content/uploads/2014/04/00V_Alexander_Pagonidis_The-IBS-Effect-Mean-Reversion-in-Equity-ETFs-1.pdf"
+    ]
+  },
+  {
+    "id": "mean_reversion__weekly_reversal_rotation",
+    "name": "Weekly loser rotation (Lehmann; de Groot et al.)",
+    "family": "cross_sectional_reversal",
+    "rule": "Each weekend: universe = largest universe_size stocks, stock Close > SMA(200) and index Close > SMA(200). Rank by rank_days closing range (Close - LowestLow) / (HighestHigh - LowestLow), lowest first (academic: prior-week return). Buy the n_long lowest at Monday's open, equal weight; sell after one week; repeat. Academic version also shorts the highest.",
+    "params": {
+      "universe_size": 100,
+      "n_long": 5,
+      "rank_days": 5,
+      "rank_days_range": "1-21",
+      "trend_sma": 200,
+      "hold_days": 5
+    },
+    "instruments": "Nifty 100 stocks, delivery, long leg only",
+    "holding_period": "1 week",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "strong_academic",
+    "india_evidence": true,
+    "reported_performance": "US 1990-2009 net of institutional costs (de Groot et al. via Quantpedia): -31.4 bp a week for 1,500 stocks, +10.6 bp for 500, +29.0 bp for the 100 largest (long-short). Long-only top-5 on S&P 500, 2007-Oct 2017 (Alvarez): RSI and return rankings no better than random; best closing-range CAR 8.26%, 0.28% per trade. India, NSE 500 2014-2021: weekly horizons showed momentum, not reversal.",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "Five positions turned weekly is ~260 delivery round trips, about Rs 36,000 (24% of capital) a year; the long-only version failed a random-ranking test and Indian weekly data favour momentum.",
+    "sources": [
+      "https://quantpedia.com/strategies/short-term-reversal-in-stocks",
+      "https://www.cxoadvisory.com/?p=6251",
+      "https://alphaarchitect.com/quantitative-momentum-research-short-term-return-reversal/",
+      "https://alvarezquanttrading.com/blog/weekly-mean-reversion-rotation-strategy-on-sp500-stocks/",
+      "https://www.arxiv.org/pdf/2302.13245",
+      "https://www.angelone.in/angel-one-brokerage-charges"
+    ]
+  },
+  {
+    "id": "mean_reversion__monthly_reversal_low_turnover",
+    "name": "One-month reversal with turnover filter (Jegadeesh; Medhat-Schmeling)",
+    "family": "cross_sectional_reversal",
+    "rule": "At month-end rank a large-cap universe by 1-month return. Exclude stocks in the top turnover_exclude_pct of 1-month turnover (volume / shares outstanding). Buy the n_long worst performers at the next open, equal weight; hold one month; rebalance. Academic version also shorts the best performers.",
+    "params": {
+      "formation_days": 21,
+      "n_long": 5,
+      "turnover_exclude_pct": 30,
+      "universe_size": 200,
+      "hold_days": 21
+    },
+    "instruments": "Nifty 100/200 stocks, delivery, long leg only",
+    "holding_period": "1 month",
+    "data_needed": [
+      "daily_equity",
+      "fundamentals"
+    ],
+    "evidence": "strong_academic",
+    "india_evidence": true,
+    "reported_performance": "US 1934-1987 about 2% a month (Jegadeesh, cited by Da et al.). US 1968-2010: 0.81% raw a month equal-weighted, zero among large stocks (Hameed-Mian). US 1963-2018: 0.84% a month in large caps but average cost 1.94% a month exceeds gross; reversal only in low-turnover stocks, momentum in the top turnover decile; faded after 2011 (Medhat-Schmeling). India: reversal reported mainly in illiquid stocks (unverified snippet).",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Only 60-120 delivery round trips a year (5.5-7.5% of capital), but the long-only large-cap edge is roughly zero in US data and Indian liquid stocks show one-month momentum when turnover is high.",
+    "sources": [
+      "https://academicweb.nd.edu/~zda/Reversal.pdf",
+      "https://web2-bschool.nus.edu.sg/wp-content/uploads/media_rp/publications/BwXb81392625636.pdf",
+      "https://alphaarchitect.com/short-term-momentum/",
+      "https://nsearchives.nseindia.com/content/research/res_paperfinal223.pdf",
+      "https://www.arxiv.org/pdf/2302.13245"
+    ]
+  },
+  {
+    "id": "mean_reversion__industry_relative_reversal",
+    "name": "Industry-relative one-month reversal (Hameed-Mian)",
+    "family": "cross_sectional_reversal",
+    "rule": "At month-end compute each stock's 1-month return minus the equal-weighted 1-month return of its industry. Buy the n_long stocks with the most negative difference, at most max_per_industry per industry, equal weight, next open; hold one month; rebalance. Academic version weights by minus the difference and shorts outperformers.",
+    "params": {
+      "formation_days": 21,
+      "n_long": 5,
+      "max_per_industry": 1,
+      "hold_days": 21,
+      "universe_size": 200
+    },
+    "instruments": "Nifty 100/200 stocks with a sector map, delivery, long leg only",
+    "holding_period": "1 month",
+    "data_needed": [
+      "daily_equity",
+      "other"
+    ],
+    "evidence": "strong_academic",
+    "india_evidence": false,
+    "reported_performance": "US 1968-2010 (Hameed-Mian): 1.14% raw / 0.97% risk-adjusted a month versus 0.63% for market-relative reversal; 0.94% in 2000-2010; 0.53% value-weighted; 0.47% among large stocks; above 1% a month after market declines. Residual reversal (Blitz et al.): profitable net of costs in large caps after 1990.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Low turnover (60 round trips a year, about 5.5% of capital) and the best-supported large-cap reversal signal, but evidence is US long-short; the long-only Indian version is untested and needs a sector classification.",
+    "sources": [
+      "https://web2-bschool.nus.edu.sg/wp-content/uploads/media_rp/publications/BwXb81392625636.pdf",
+      "https://www.robeco.com/en-za/insights/2011/11/short-term-residual-reversal"
+    ]
+  },
+  {
+    "id": "mean_reversion__daily_contrarian_open_to_close",
+    "name": "Daily cross-sectional contrarian, open to close",
+    "family": "cross_sectional_reversal",
+    "rule": "Each morning rank a liquid universe by cumulative return over the last formation_days closes. At the open short the n_per_side best performers and buy the n_per_side worst, equal rupee size, intraday product; close all at the close. Lo-MacKinlay variant: weights proportional to minus (stock return - market return) for the prior day.",
+    "params": {
+      "formation_days": 3,
+      "formation_range": "1-7",
+      "hold_days": 1,
+      "n_per_side": 5,
+      "paper_group_size": 10
+    },
+    "instruments": "F&O-list / Nifty 200 stocks, intraday (MIS) both sides",
+    "holding_period": "Intraday (open to close)",
+    "data_needed": [
+      "daily_equity"
+    ],
+    "evidence": "strong_academic",
+    "india_evidence": true,
+    "reported_performance": "NSE 500, 2014-2021, no costs (arXiv 2302.13245): best loser-minus-winner 6.04% a month, max DD -13.7%; profit came from the short-winner leg, both legs negative open-to-close. US gross: 1.38% a day in 1995 falling to 0.13% in 2007 (Khandani-Lo); 0.30% a day on trade prices but 0.18% on quote midpoints, 1998-2010 (Nagel).",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Delivery is impossible (0.3-0.6% a day). Intraday costs are 0.07-0.19% per name per day plus open-auction slippage against a gross 0.2-0.4% a day; needs intraday shorting, leverage and daily automation; long-only version lost money in the Indian study.",
+    "sources": [
+      "https://www.arxiv.org/pdf/2302.13245",
+      "https://www.newyorkfed.org/medialibrary/media/research/conference/2007/liquidity/Khandani_Lo.pdf",
+      "https://www.nber.org/papers/w17653.pdf",
+      "https://www.angelone.in/angel-one-brokerage-charges"
+    ]
+  },
+  {
+    "id": "mean_reversion__large_decline_reversal_india",
+    "name": "Buy large, liquid Indian stocks after a large one-month fall",
+    "family": "event_reversal",
+    "rule": "At month-end, among large liquid NSE stocks, flag any stock whose 1-month return <= -drop_pct. Buy at the next open, equal slots, at most max_positions; hold hold_months, then sell. No stop in the source; a max_loss_pct time-independent exit is an optional addition.",
+    "params": {
+      "drop_pct": 20,
+      "drop_pct_range": "15-25",
+      "hold_months": 3,
+      "hold_range_months": "1-6",
+      "max_positions": 4,
+      "max_loss_pct": 25
+    },
+    "instruments": "Nifty 100/200 stocks, delivery",
+    "holding_period": "1-6 months",
+    "data_needed": [
+      "daily_equity"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "Large liquid Indian stocks (Parthasarathy and Sendilvelu, Economic Thought Journal 2022): significant reversals after large monthly declines and rises for up to six months, stronger after larger shocks, robust to microstructure and market effects; magnitudes not available in the abstract. Threshold is an assumption.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "A handful of delivery trades a year held for months, so 0.3-0.5% cost is minor; main risks are value traps (ideally screen out fraud or results-driven falls, which needs event data) and no stop; effect sizes unknown.",
+    "sources": [
+      "https://etj.iki.bas.bg/en/microeconomics/2022/08/02/on-stock-return-patterns-following-large-monthly-price-movements-empirical-evidence-from-india",
+      "https://premium.capitalmind.in/2018/09/when-a-stock-falls-big-is-that-a-opportunity-or-a-forebearer-of-further-bad-news/"
+    ]
+  },
+  {
+    "id": "mean_reversion__opening_gap_fade",
+    "name": "Opening gap-down fade on the index",
+    "family": "gap",
+    "rule": "Intraday. If the open is between min_gap_pct and max_gap_pct below yesterday's close and yesterday's IBS < 0.25, buy at the open. Target = entry price + target_fraction * gap size; if not reached, exit at the close. No stop. Skip gaps beyond max_gap_pct.",
+    "params": {
+      "min_gap_pct": 0.15,
+      "max_gap_pct": 0.6,
+      "prior_ibs_max": 0.25,
+      "target_fraction": 0.75
+    },
+    "instruments": "Index ETF intraday (MIS) or index futures",
+    "holding_period": "Intraday",
+    "data_needed": [
+      "intraday",
+      "daily_index"
+    ],
+    "evidence": "anecdotal",
+    "india_evidence": false,
+    "reported_performance": "SPY Jan 2010-Aug 2012 (QuantifiedStrategies): 110 fills, 98 winners, 0.19% per fill on end-of-day data; 89 fills, 0.22% (long) and 0.08% (short) on 30-minute data; author calls the first result 'probably too good to be true'. No verified Nifty fill-rate data exists; Nifty opening returns show momentum (JGU summary).",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Intraday ETF round trip 0.07-0.13% takes half or more of a 0.1-0.2% edge; one Nifty futures lot uses the whole account; needs intraday data and open-auction execution.",
+    "sources": [
+      "https://www.quantifiedstrategies.com/gap-fill-trading-strategies/",
+      "https://onetradejournal.com/strategies/gap-fill-strategy",
+      "https://optionx.trade/blogs/nifty-bank-nifty-gap-fill-strategy",
+      "https://research.jgu.edu.in/do-daily-price-extremes-influence-short-term-investment-decisions-evidence-from-the-indian-equity-market/"
+    ]
+  },
+  {
+    "id": "mean_reversion__high_volatility_conditioned_reversal",
+    "name": "Take index reversal entries only when implied volatility is elevated",
+    "family": "volatility_conditioned",
+    "rule": "Overlay on an index-ETF reversal entry (default IBS < 0.2 at the close, exit IBS > 0.8). Take the entry only if India VIX close > SMA(India VIX, vix_sma). Otherwise stay flat. Exits unchanged. Test the opposite filter (VIX below a cap) for multi-day stock pullback systems.",
+    "params": {
+      "vix_sma": 100,
+      "base_entry": "IBS<0.2",
+      "base_exit": "IBS>0.8",
+      "alt_vix_cap": 25
+    },
+    "instruments": "Liquid NSE index ETFs, delivery; India VIX as input",
+    "holding_period": "1-6 trading days",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": false,
+    "reported_performance": "SPY IBS system (QuantifiedStrategies): VIX > 100-day average raises average trade from 0.41% to 0.53% and profit factor from 1.92 to 2.19, but is sensitive to the average length. US 1998-2010 (Nagel): reversal returns strongly predicted by VIX. Contrary: RSI(2) stock systems lost in 2020 and 2022 (Alvarez).",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "An overlay that reduces trade count; needs India VIX daily history; sign of the effect differs between index one-day reversal and stock pullback systems.",
+    "sources": [
+      "https://www.quantifiedstrategies.com/internal-bar-strength-ibs-indicator-strategy/",
+      "https://www.nber.org/papers/w17653.pdf",
+      "https://web2-bschool.nus.edu.sg/wp-content/uploads/media_rp/publications/BwXb81392625636.pdf",
+      "https://alvarezquanttrading.com/blog/mean-reversion-check-up-2022/",
+      "https://www.quantifiedstrategies.com/rsi-2-strategy/"
+    ]
+  },
+  {
+    "id": "mean_reversion__earnings_announcement_reversal",
+    "name": "Pre-earnings loser reversal (So and Wang)",
+    "family": "event_reversal",
+    "rule": "For large-cap stocks with earnings date t: compute average return over days t-4 to t-2. Buy the bottom quintile at the close of t-2 and hold through the close of t+1. Academic version also shorts the top quintile. Equal weights.",
+    "params": {
+      "formation_window": "t-4..t-2",
+      "holding_window": "t-1..t+1",
+      "quintiles": 5
+    },
+    "instruments": "Large-cap stocks with a reliable results calendar, delivery",
+    "holding_period": "3 trading days",
+    "data_needed": [
+      "daily_equity",
+      "events"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": false,
+    "reported_performance": "US 1996-2011, largest size quintile (Quantpedia): indicative 6.5% a year long-short, volatility 3.76%; reversals six times larger around earnings than otherwise.",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "Roughly 0.16% gross per 3-day window for the long-short spread versus 0.27-0.62% delivery cost per round trip; holds single stocks through results; needs event data.",
+    "sources": [
+      "https://quantpedia.com/strategies/reversal-during-earnings-announcements"
+    ]
+  },
+  {
+    "id": "mean_reversion__rsi_30_70_recovery_swing",
+    "name": "RSI crosses back above 30, exit above 70 (Indian index stocks)",
+    "family": "oscillator_pullback",
+    "rule": "Daily bars, long-only. Buy at the next open after RSI(rsi_length) crosses above 30 from below. Sell at the next open after RSI crosses above 70. Equal slots, at most max_positions; skip signals when full. No stop in the source.",
+    "params": {
+      "rsi_length": 21,
+      "rsi_length_alt": 14,
+      "buy_cross": 30,
+      "sell_cross": 70,
+      "max_positions": 5
+    },
+    "instruments": "Nifty 50 / Next 50 / Nifty 500 stocks, delivery",
+    "holding_period": "Weeks to months (about one trade per stock per year)",
+    "data_needed": [
+      "daily_equity"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "25-year backtest on Indian index stocks (Share.Market/PhonePe, 2025): with 21-period RSI, 79.05% win rate and 15.65% average return per trade; long-only worked, short-only and long-short lost. No costs; current constituents used throughout (survivorship bias).",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Very low turnover so delivery costs of 0.3-0.6% per trade are minor; capital is tied up for months and reported returns are inflated by survivorship bias.",
+    "sources": [
+      "https://share.market/buzz/insights/the-rsi-myth-is-this-popular-indicator-worth-using-part-2-research-report"
+    ]
+  }
+]

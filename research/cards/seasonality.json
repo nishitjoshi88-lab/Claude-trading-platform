@@ -1,0 +1,832 @@
+[
+  {
+    "id": "seasonality__turn_of_month_index",
+    "name": "Turn-of-month long in index ETF",
+    "family": "monthly_cycle",
+    "rule": "Each month buy NIFTYBEES with full capital at the close of the n_in-th last trading day of the month; sell at the close of the n_out-th trading day of the next month. Flat (liquid ETF) otherwise. No stop. Test grid n_in 1..7, n_out 1..4, and anchor on monthly F&O expiry date instead of month end.",
+    "params": {
+      "n_in_last_trading_day": 5,
+      "n_out_trading_day": 3,
+      "n_in_range": [
+        1,
+        7
+      ],
+      "n_out_range": [
+        1,
+        4
+      ],
+      "anchor": "month_end",
+      "stop": null
+    },
+    "instruments": "NIFTYBEES or other Nifty 50 / Nifty 500 ETF, delivery",
+    "holding_period": "2 to 8 trading days, once a month",
+    "data_needed": [
+      "daily_index",
+      "daily_equity"
+    ],
+    "evidence": "strong_academic",
+    "india_evidence": true,
+    "reported_performance": "US CRSP 1926-2005: 0.15%/day on days -1..+3 vs 0.01% other days (t=7.81), Sharpe 1.04 pre-cost. Nifty 2007/08-2021 (QuantifiedStrategies, 5th-last to 2nd day): CAGR 10.5%, max DD 26%, 30% exposure, price index, no costs. Nifty 2016-2025 (Zerodha, 5th-last to 3rd day): about 0.82% per trade pre-cost; flat in 2018-19 and 2024-25.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "One index-ETF order each way; no margin, no shorting, about 0.10% round trip at Rs 1.5 lakh (brokerage Rs 20 per order, ETF sell STT 0.001%). Twelve trades a year cost about 1.2% against a gross edge of roughly 0.5-0.8% per trade.",
+    "sources": [
+      "https://quantpedia.com/strategies/turn-of-the-month-in-equity-indexes",
+      "https://quantpedia.com/quantpedias-composite-seasonalcalendar-strategy-case-study/",
+      "https://www.quantifiedstrategies.com/turn-of-the-month-trading-strategy/",
+      "https://www.quantifiedstrategies.com/end-of-month-effect-in-nifty-50-does-it-exist-turn-of-the-month/",
+      "https://inthemoneybyzerodha.substack.com/p/turn-of-the-month-tomtotm-strategy",
+      "https://ideas.repec.org/a/sae/padigm/v11y2007i2p9-15.html",
+      "https://rfb.ase.ro/Vol15-2023/dec2a.asp",
+      "https://arxiv.org/html/2507.04859v2"
+    ]
+  },
+  {
+    "id": "seasonality__turn_of_month_smallcap",
+    "name": "Turn-of-month long in small/mid-cap index ETF",
+    "family": "monthly_cycle",
+    "rule": "Same as turn-of-month index rule but instrument is a Nifty Smallcap 250 or Midcap 150 ETF (test on the index first): buy at close of 5th last trading day, sell at close of 3rd trading day of next month. Skip if the ETF's 20-day median traded value is below min_traded_value_inr_assumed. No stop.",
+    "params": {
+      "n_in_last_trading_day": 5,
+      "n_out_trading_day": 3,
+      "universe": [
+        "NIFTY SMALLCAP 250",
+        "NIFTY MIDCAP 150"
+      ],
+      "min_traded_value_inr_assumed": 20000000
+    },
+    "instruments": "Small-cap or mid-cap index ETF, delivery",
+    "holding_period": "about 7 trading days, once a month",
+    "data_needed": [
+      "daily_index",
+      "daily_equity"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "Satish & Bheemanagouda 2023 (Nifty 50, Sensex, Nifty Smallcap 50, BSE SmallCap, Apr 2007-Feb 2023): TOM significant and 'more pronounced in smaller indices'; magnitudes not seen (abstract only).",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Tradable with one order, but small-cap ETF spreads and closing premium/discount to NAV are unmeasured and can absorb much of a 0.5-1% edge; index backtest overstates ETF result.",
+    "sources": [
+      "https://rfb.ase.ro/Vol15-2023/dec2a.asp",
+      "https://ideas.repec.org/a/rfb/journl/v15y2023i2p101-118.html",
+      "https://quantpedia.com/strategies/turn-of-the-month-in-equity-indexes",
+      "https://trendlyne.com/posts/4478718/which-are-the-best-and-worst-months-for-indian-stocks-screener-stocks-outperforming-their-sectors"
+    ]
+  },
+  {
+    "id": "seasonality__mid_month_payday",
+    "name": "Mid-month payday effect (16th day)",
+    "family": "monthly_cycle",
+    "rule": "Buy index ETF at the close of the last trading day on or before the 15th calendar day; sell at the close of the first trading day on or after the 16th. One day hold, once a month. No stop.",
+    "params": {
+      "entry_calendar_day": 15,
+      "exit_calendar_day": 16
+    },
+    "instruments": "NIFTYBEES, delivery",
+    "holding_period": "1 trading day, once a month",
+    "data_needed": [
+      "daily_index",
+      "daily_equity"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": false,
+    "reported_performance": "US S&P 500 1980-2010 (Ma & Pratt via Quantpedia): 16th beats all days except 1st and 2nd; 2.57%/yr, vol 4.31%, Sharpe 0.6; SPY 1993-2019: 2.08%/yr, max DD 8.62%. Weakening as US pay moves bi-weekly. No Indian evidence; Indian pay is monthly.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "One index-ETF order each way; no margin, no shorting, about 0.10% round trip at Rs 1.5 lakh (brokerage Rs 20 per order, ETF sell STT 0.001%). Mechanism (semi-monthly US payroll) does not exist in India, so low prior.",
+    "sources": [
+      "https://quantpedia.com/strategies/payday-anomaly",
+      "https://quantpedia.com/quantpedias-composite-seasonalcalendar-strategy-case-study/",
+      "https://inthemoneybyzerodha.substack.com/p/turn-of-the-month-tomtotm-strategy"
+    ]
+  },
+  {
+    "id": "seasonality__expiry_day_accumulation",
+    "name": "Deploy new capital on monthly expiry day, not first trading day",
+    "family": "monthly_cycle",
+    "rule": "When adding or reinvesting capital into a long-term index ETF holding, place the buy at the close of the monthly F&O expiry day (from contract master: last Thursday before Sep 2025, last Tuesday after) instead of the first trading day of the next month. Compare with buying on the 25th or the 5th last trading day.",
+    "params": {
+      "buy_day": "monthly_fo_expiry",
+      "alternatives": [
+        "calendar_day_25",
+        "5th_last_trading_day",
+        "first_trading_day"
+      ]
+    },
+    "instruments": "NIFTYBEES or index fund",
+    "holding_period": "long-term accumulation",
+    "data_needed": [
+      "daily_index",
+      "daily_fo"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "Gavhale 2025 preprint, Nifty 2003-2024: expiry-day SIP beat first-trading-day SIP by 0.77 pp/yr (1-yr windows), 0.27 (3-yr), 0.125 (5-yr), 0.03-0.07 (10-20 yr). PrimeInvestor 2008-2022 and WhiteOak 1996-2025 find SIP date makes negligible difference.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Costless change of buy date; expected gain only a few basis points a year at long horizons.",
+    "sources": [
+      "https://arxiv.org/html/2507.04859v2",
+      "https://primeinvestor.in/which-date-is-the-best-for-sips/",
+      "https://www.businesstoday.in/mutual-funds/story/mid-cap-sip-returns-lead-best-sip-date-salary-day-494443-2025-09-17"
+    ]
+  },
+  {
+    "id": "seasonality__day_of_week_index",
+    "name": "Day-of-week long in index",
+    "family": "weekly_cycle",
+    "rule": "Hold index ETF only from the close of the trading day before weekday W to the close of weekday W, every week. Test each W in Mon..Fri and a Friday-close to Monday-close weekend variant. No stop.",
+    "params": {
+      "weekday": "Wednesday",
+      "weekday_range": [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday"
+      ]
+    },
+    "instruments": "NIFTYBEES",
+    "holding_period": "1 trading day, weekly",
+    "data_needed": [
+      "daily_index",
+      "daily_equity"
+    ],
+    "evidence": "negative",
+    "india_evidence": true,
+    "reported_performance": "Nifty 1995-2015: Wednesday +0.16%/day in EGARCH (z=4.7), driven by weekly-settlement era. Nifty 2011-2018: no day-of-week effect. Mar 2020-Sep 2021: Tuesday and Friday positive. Nifty 2000-2011: effects vanish in 3-year sub-periods.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Mechanically trivial, but about 50 round trips a year at 0.10% is 5% a year of cost against an effect that changes weekday in every sample.",
+    "sources": [
+      "https://www.srcc.edu/system/files/Article-No8-Efficient-Market-Hypothesis-and-Calendar-Effects-Updates.pdf",
+      "https://ideas.repec.org/a/sae/vision/v17y2013i3p233-245.html",
+      "https://ideas.repec.org/a/ids/gbusec/v24y2021i1p43-58.html",
+      "https://publishingindia.com/storage/PDFBrochures/8019.pdf"
+    ]
+  },
+  {
+    "id": "seasonality__weekday_short_vol",
+    "name": "Sell option premium on Monday, cover mid-week (India VIX weekday pattern)",
+    "family": "weekly_cycle_volatility",
+    "rule": "At Monday close sell one-lot Nifty iron butterfly (short ATM call+put, long wings wing_pct away) in the nearest weekly expiry with at least min_dte trading days left. Exit at exit_day close or when loss equals stop_mult x credit. Skip weeks with Budget, RBI, FOMC or election result before exit.",
+    "params": {
+      "entry_day": "Monday",
+      "exit_day": "Wednesday",
+      "wing_pct": 2.0,
+      "min_dte": 5,
+      "stop_mult": 1.0,
+      "lots": 1
+    },
+    "instruments": "Nifty weekly options (lot 65), hedged",
+    "holding_period": "2 to 4 trading days, weekly",
+    "data_needed": [
+      "daily_fo",
+      "daily_index",
+      "events"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "Shaikh & Padhi 2015: India VIX rises significantly on Monday, falls Wednesday-Friday and on expiry day; March and December negative (period not shown; Thursday-expiry era). No backtest of the trade itself found.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "One hedged lot should fit the account (margin not verified) but cannot be sized smaller; four legs each way cost roughly Rs 160 charges plus slippage; expiry is now Tuesday so the pattern may have shifted.",
+    "sources": [
+      "https://ceeol.com/search/article-detail?id=285053",
+      "https://iima.ac.in/sites/default/files/rnpfiles/19191060542012-11-03.pdf",
+      "https://www.phonepeinvest.com/buzz/insights/weekly-expiry-days-in-indian-fo-markets/"
+    ]
+  },
+  {
+    "id": "seasonality__overnight_long_index",
+    "name": "Overnight long: buy close, sell next open",
+    "family": "overnight_intraday",
+    "rule": "Every trading day buy the index instrument at entry_time (near close) and sell at exit_time next trading day (near open). Optional filter: only when close > 200-day SMA. No stop.",
+    "params": {
+      "entry_time": "15:25",
+      "exit_time": "09:20",
+      "trend_filter_sma": null,
+      "cost_per_round_trip_pct": 0.1
+    },
+    "instruments": "NIFTYBEES (delivery) or Nifty futures",
+    "holding_period": "overnight, daily",
+    "data_needed": [
+      "daily_equity",
+      "daily_index",
+      "intraday"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Capitalmind: virtually all Nifty points since 1995 came close-to-open; 2008-2020, 64% of nights up vs 46% of days up. Marketcalls, Nifty futures Jan 2011-Jun 2018: +595% gross on Rs 1 lakh; with 0.02% cost lost 67% in 185 trades (Rs 1 lakh) or made 9.3%/yr (Rs 2 lakh).",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "About 245 ETF round trips a year at 0.10% is about 25% a year of cost, above the gross edge; one Nifty futures lot (about Rs 16 lakh notional) cannot be margined and futures STT is 0.05% since Apr 2026.",
+    "sources": [
+      "https://premium.capitalmind.in/2019/10/while-you-were-sleeping-what-stocks-do-overnight-versus-in-trading-hours/",
+      "https://premium.capitalmind.in/2020/08/capitalmind-chase-roaring-day-and-night/",
+      "https://www.marketcalls.in/amibroker/buy-at-todays-close-and-sell-at-next-day-open-do-simple-trading-strategies-really-work-part2.html",
+      "https://arxiv.org/abs/2010.01727",
+      "https://conference.nber.org/conf_papers/f78239/f78239.pdf",
+      "https://www.angelone.in/exchange-transaction-charges"
+    ]
+  },
+  {
+    "id": "seasonality__intraday_short_index",
+    "name": "Intraday short: sell open, cover close",
+    "family": "overnight_intraday",
+    "rule": "Every trading day short the index instrument at the open (09:16) and cover at 15:20. Skip if opening gap magnitude exceeds max_gap_pct. No overnight position.",
+    "params": {
+      "entry_time": "09:16",
+      "exit_time": "15:20",
+      "max_gap_pct": null
+    },
+    "instruments": "Nifty futures or intraday ETF short",
+    "holding_period": "intraday, daily",
+    "data_needed": [
+      "daily_equity",
+      "daily_index",
+      "intraday"
+    ],
+    "evidence": "negative",
+    "india_evidence": true,
+    "reported_performance": "Only 46% of Nifty days closed above the open over about 3,000 days to 2020 (Capitalmind), but Marketcalls' author reports the short-open/cover-close test is 'not worth playing'; in up-trends longs gained intraday too.",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "Daily intraday round trips cost about 0.07% each, about 17% a year; futures lot too large for the account; mean intraday drift is too small.",
+    "sources": [
+      "https://premium.capitalmind.in/2020/08/capitalmind-chase-roaring-day-and-night/",
+      "https://www.marketcalls.in/amibroker/buy-at-todays-close-and-sell-at-next-day-open-do-simple-trading-strategies-really-work-part2.html"
+    ]
+  },
+  {
+    "id": "seasonality__overnight_short_options",
+    "name": "Overnight short Nifty options (sell at close, cover at open)",
+    "family": "overnight_intraday_volatility",
+    "rule": "At entry_time sell one-lot ATM Nifty straddle in the nearest weekly expiry with at least min_dte days left and buy wings wing_pct away; buy back all legs at exit_time next trading day. Skip nights before Budget, RBI policy, FOMC and election results. Optional: skip weekends.",
+    "params": {
+      "entry_time": "15:25",
+      "exit_time": "09:20",
+      "wing_pct": 1.5,
+      "min_dte": 2,
+      "hold_weekends": true,
+      "lots": 1
+    },
+    "instruments": "Nifty weekly options (lot 65), hedged",
+    "holding_period": "overnight",
+    "data_needed": [
+      "daily_fo",
+      "intraday",
+      "events"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "Bhat, Pandey & Rao, J. Futures Markets 2024, Nifty options 2017-2020: short-option overnight (close-to-open) mean returns positive and highly significant; intraday and open-to-open returns negative/insignificant; robust across calls, puts, moneyness, maturity, weekends; weaker on jump days. Magnitudes not seen (paywall). Delta-hedged, pre-cost.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "One hedged lot only; eight option orders a night (about Rs 160-250 charges plus slippage) against a small nightly premium; gap risk is the risk being sold; option STT 0.15% since Apr 2026.",
+    "sources": [
+      "https://law-journals-books.vlex.com/vid/the-asymmetry-in-day-1115554990",
+      "https://www.angelone.in/exchange-transaction-charges",
+      "https://cleartax.in/s/securities-transaction-tax-stt"
+    ]
+  },
+  {
+    "id": "seasonality__overnight_momentum_stocks",
+    "name": "Momentum winners held only overnight",
+    "family": "overnight_intraday_cross_sectional",
+    "rule": "Monthly: rank Nifty 100 stocks on 12-month return skipping the latest month; take top decile. Daily: buy the basket at the close, sell at next open. (Published version is long winners, short losers overnight.)",
+    "params": {
+      "universe": "NIFTY 100",
+      "lookback_months": 12,
+      "skip_months": 1,
+      "top_fraction": 0.1
+    },
+    "instruments": "Large-cap stocks, delivery",
+    "holding_period": "overnight, daily",
+    "data_needed": [
+      "daily_equity"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": false,
+    "reported_performance": "Lou, Polk & Skouras (US stocks): all momentum abnormal returns accrue overnight; other anomalies earn intraday; overnight-vs-intraday spread varies by about 2%/month with institutional activity. No Indian test found.",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "Daily delivery round trips in ten stocks cost about 0.6% per position per day at Rs 15,000 tickets (brokerage, 0.1% STT each side, DP charge); no overnight short leg possible.",
+    "sources": [
+      "https://conference.nber.org/conf_papers/f78239/f78239.pdf",
+      "https://www.angelone.in/exchange-transaction-charges"
+    ]
+  },
+  {
+    "id": "seasonality__halloween_sell_in_may",
+    "name": "Halloween / Sell in May",
+    "family": "annual_cycle",
+    "rule": "Hold index ETF from the close of the last trading day of October to the close of the last trading day of April; hold liquid ETF from May to October. Two switches a year.",
+    "params": {
+      "in_months": [
+        11,
+        12,
+        1,
+        2,
+        3,
+        4
+      ],
+      "out_asset": "liquid_etf"
+    },
+    "instruments": "NIFTYBEES and a liquid ETF",
+    "holding_period": "6 months",
+    "data_needed": [
+      "daily_index",
+      "daily_equity"
+    ],
+    "evidence": "negative",
+    "india_evidence": true,
+    "reported_performance": "Global 1970-2003: 8.8% in Nov-Apr, about zero May-Oct. India: Sensex since 2000 averaged 9.35% May-Oct vs 6.92% Nov-Apr; Rs 10,000 from Nov 1995 to Sep 2015 became Rs 40,000 with the rule vs Rs 74,975 buy-and-hold. Nifty 2001-2025 monthly averages also favour May-Oct.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Two ETF switches a year; trivial to run, but Indian evidence is against it.",
+    "sources": [
+      "https://quantpedia.com/strategies/market-seasonality-effect-in-world-equity-indexes",
+      "https://stableinvestor.com/2015/10/october-effect-stock-markets-financial-nonsense.html",
+      "https://insights.dsij.in/appmindshare/nifty-50-posted-gains-in-18-of-the-last-25-julys-will-the-bull-run-continue-58147"
+    ]
+  },
+  {
+    "id": "seasonality__month_of_year_tilt",
+    "name": "India month-of-year tilt: out Jan-Mar, in Apr-Dec",
+    "family": "annual_cycle",
+    "rule": "Hold index ETF from the close of the last trading day of March to the close of the last trading day of December; hold liquid ETF in months_out. Variant: hold only months in strong_months. One or few switches a year.",
+    "params": {
+      "months_out": [
+        1,
+        2,
+        3
+      ],
+      "strong_months": [
+        4,
+        7,
+        11,
+        12
+      ],
+      "out_asset": "liquid_etf"
+    },
+    "instruments": "NIFTYBEES and a liquid ETF",
+    "holding_period": "9 months",
+    "data_needed": [
+      "daily_index",
+      "daily_equity"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "Nifty 2001-2025 monthly averages: Jan -0.47%, Feb -0.74%, Mar slightly negative, Apr +1.94%, Jul +2.19%, Nov +2.50%, Dec +2.61%. December mean 3.19%, 73% positive over 26 years. Dec significant in Nifty 1995-2015 (t=2.45). No month effect in Nifty 50 for 2011-2018.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "One round trip a year; but each exit is a short-term gain taxed at 20%, which can exceed the roughly 1.3% a year the averages suggest.",
+    "sources": [
+      "https://insights.dsij.in/appmindshare/nifty-50-posted-gains-in-18-of-the-last-25-julys-will-the-bull-run-continue-58147",
+      "https://upstox.com/news/market-news/trading/analyzing-nifty-50-s-december-performance-trends-averages-and-historical-patterns-in-the-last-26-years/article-132700",
+      "https://www.srcc.edu/system/files/Article-No8-Efficient-Market-Hypothesis-and-Calendar-Effects-Updates.pdf",
+      "https://trendlyne.com/posts/4478718/which-are-the-best-and-worst-months-for-indian-stocks-screener-stocks-outperforming-their-sectors",
+      "https://wrightresearch.in/blog/buying-stocks-in-october-november-and-december-seasonal-patterns-in-global-and-indian-stock-markets",
+      "https://wrightresearch.in/blog/decoding-the-march-effect-why-stocks-can-be-volatile-in-march",
+      "https://ideas.repec.org/a/ids/gbusec/v24y2021i1p43-58.html",
+      "https://ideas.repec.org/a/sae/vision/v17y2013i3p233-245.html"
+    ]
+  },
+  {
+    "id": "seasonality__fy_end_april_rebound",
+    "name": "Fiscal-year-end dip and April rebound",
+    "family": "annual_cycle",
+    "rule": "Buy at the close of the entry_n-th last trading day of March; sell at the close of the last trading day of April. Instrument: Nifty ETF (default), mid/small-cap ETF, or the n_losers worst year-to-date Nifty 500 stocks (tax-loss candidates), equal weight.",
+    "params": {
+      "entry_n_last_trading_day_march": 3,
+      "exit": "last_trading_day_april",
+      "n_losers": 10,
+      "universe": "NIFTY 50 ETF"
+    },
+    "instruments": "Index ETF or stock basket, delivery",
+    "holding_period": "about 22 trading days, once a year",
+    "data_needed": [
+      "daily_index",
+      "daily_equity"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Trendlyne 2006-Feb 2024: April best month for most Nifty indices, up in 13 of 18 years (Nifty Auto 16 of 18); Jan-Mar quarter usually negative. Nifty April average +1.94% over 2001-2025. April not significant in Nifty 1995-2015 regression (t=0.6).",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "ETF version is one trade a year. The loser-basket version is marginal: about 0.6% round trip per Rs 15,000 position.",
+    "sources": [
+      "https://trendlyne.com/posts/4478718/which-are-the-best-and-worst-months-for-indian-stocks-screener-stocks-outperforming-their-sectors",
+      "https://wrightresearch.in/blog/decoding-the-march-effect-why-stocks-can-be-volatile-in-march",
+      "https://insights.dsij.in/appmindshare/nifty-50-posted-gains-in-18-of-the-last-25-julys-will-the-bull-run-continue-58147",
+      "https://www.srcc.edu/system/files/Article-No8-Efficient-Market-Hypothesis-and-Calendar-Effects-Updates.pdf"
+    ]
+  },
+  {
+    "id": "seasonality__january_barometer",
+    "name": "January barometer",
+    "family": "annual_cycle",
+    "rule": "Hold index ETF in barometer_month. If that month's return is positive, stay long for the next 11 months; otherwise hold liquid ETF for 11 months. Test barometer_month = 1 (published) and 4 (Indian fiscal year, untested).",
+    "params": {
+      "barometer_month": 1,
+      "alt_barometer_month": 4,
+      "out_asset": "liquid_etf"
+    },
+    "instruments": "NIFTYBEES and a liquid ETF",
+    "holding_period": "1 to 12 months",
+    "data_needed": [
+      "daily_index",
+      "daily_equity"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": false,
+    "reported_performance": "US 1857-2008 (Cooper, McConnell & Ovtchinnikov via Quantpedia): 10.38%/yr vs 9.98% index, vol 16.8% vs 19.2%, Sharpe 0.38. No Indian evidence; Nifty January averaged -0.47% in 2001-2025, so the rule would often sit out strong Apr-Dec periods.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "At most two ETF switches a year; no Indian support.",
+    "sources": [
+      "https://quantpedia.com/strategies/january-barometer",
+      "https://insights.dsij.in/appmindshare/nifty-50-posted-gains-in-18-of-the-last-25-julys-will-the-bull-run-continue-58147"
+    ]
+  },
+  {
+    "id": "seasonality__same_calendar_month_stocks",
+    "name": "Same-calendar-month seasonality in stocks",
+    "family": "annual_cycle_cross_sectional",
+    "rule": "At each month end, for every Nifty 100 stock compute the mean of its returns in the coming calendar month over the previous n_years years (lags 12, 24, ...). Buy the top_n stocks equal weight; hold one month; repeat. (Published version: long top decile, short bottom decile.)",
+    "params": {
+      "universe": "NIFTY 100",
+      "n_years": 5,
+      "lags_months": [
+        12,
+        24,
+        36,
+        48,
+        60
+      ],
+      "top_n": 10
+    },
+    "instruments": "Large-cap stocks, delivery, long-only",
+    "holding_period": "1 month",
+    "data_needed": [
+      "daily_equity"
+    ],
+    "evidence": "strong_academic",
+    "india_evidence": false,
+    "reported_performance": "Heston & Sadka, NYSE/AMEX large caps 1965-2002: long-short on 12-month-lag return 0.69%/month, 8.6%/yr, vol 12.2%, Sharpe 0.38 (t=4.19), pre-cost. No Indian test found.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Near-100% monthly turnover in ten Rs 15,000 positions costs about 0.6% a month, about 7% a year, comparable to the whole published premium; no short leg.",
+    "sources": [
+      "https://quantpedia.com/strategies/12-month-cycle-in-cross-section-of-stocks-returns",
+      "https://www.angelone.in/exchange-transaction-charges"
+    ]
+  },
+  {
+    "id": "seasonality__pre_post_holiday",
+    "name": "Pre-holiday and post-holiday long",
+    "family": "holiday",
+    "rule": "For each weekday NSE trading holiday H: pre leg buys index ETF at the close two trading days before H and sells at the close of the last trading day before H; post leg buys at that same close and sells at the close of the first trading day after H. Trade side = pre, post or both.",
+    "params": {
+      "side": "post",
+      "include_weekend_adjacent": true
+    },
+    "instruments": "NIFTYBEES",
+    "holding_period": "1 trading day, about 14-16 times a year",
+    "data_needed": [
+      "daily_index",
+      "daily_equity",
+      "events"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "Dow Jones 1896-2002: pre-holiday days 0.239%/day; 6.39%/yr incl. cash interest. India: Lu & Patel 2016 (BSE indices, around 2008 crisis) find strong post-holiday effect and no pre-holiday effect. Nifty 2016-2021: only Diwali shows a significant before/after difference.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "One index-ETF order each way; no margin, no shorting, about 0.10% round trip at Rs 1.5 lakh (brokerage Rs 20 per order, ETF sell STT 0.001%). Needs the NSE holiday calendar per year.",
+    "sources": [
+      "https://quantpedia.com/strategies/pre-holiday-effect",
+      "https://ideas.repec.org/a/ebl/ecbull/eb-16-00286.html",
+      "https://ideas.repec.org/a/aag/wpaper/v27y2023i1p115-142.html",
+      "https://ideas.repec.org/a/sae/vision/v17y2013i3p233-245.html",
+      "https://iima.ac.in/sites/default/files/rnpfiles/19191060542012-11-03.pdf"
+    ]
+  },
+  {
+    "id": "seasonality__muhurat_session",
+    "name": "Diwali Muhurat session gap",
+    "family": "holiday",
+    "rule": "Buy index ETF at the close of the last regular session before the Diwali Muhurat session. Exit version A: sell in the Muhurat opening auction. Version B: sell at the Muhurat close. Variant: small-cap ETF instead of Nifty ETF. Once a year.",
+    "params": {
+      "exit": "muhurat_open",
+      "alt_exit": "muhurat_close",
+      "instrument_variant": "smallcap_etf"
+    },
+    "instruments": "NIFTYBEES or small-cap ETF",
+    "holding_period": "under 1 trading day, once a year",
+    "data_needed": [
+      "daily_index",
+      "daily_equity",
+      "events"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Nifty 2006-2025, previous close to Muhurat close: up 15 of 20; mean +0.51%, median +0.30%, mean ex-2008 +0.21%. In 17 of 20 sessions the index closed below its Muhurat open, so the gain is in the gap. Small/micro-cap indices moved about twice the Nifty in 2015-2024.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "One ETF round trip a year; expected profit after 0.10% cost is a few hundred rupees; thin ETF liquidity in the one-hour session.",
+    "sources": [
+      "https://www.finnovate.in/learn/blog/20-years-muhurat-trading-historical-returns",
+      "https://www.businesstoday.in/markets/stocks/story/nifty-up-7-years-straight-in-muhurat-trading-will-samvat-2082-make-it-eight-498995-2025-10-21"
+    ]
+  },
+  {
+    "id": "seasonality__budget_window",
+    "name": "Union Budget window: long day before and day after, flat on Budget day",
+    "family": "scheduled_event",
+    "rule": "B = Budget day. Buy index ETF at close of B-2, sell at close of B-1. Flat on B. Buy at close of B, sell at close of B+post_days. Conditional variant: take the post leg only if Nifty fell more than pre_drop_pct over the 20 sessions before B.",
+    "params": {
+      "post_days": 1,
+      "post_days_range": [
+        1,
+        5
+      ],
+      "pre_drop_pct": 3.0,
+      "include_interim_budgets": true
+    },
+    "instruments": "NIFTYBEES (Bank Nifty ETF variant)",
+    "holding_period": "1 to 5 trading days, once or twice a year",
+    "data_needed": [
+      "daily_index",
+      "daily_equity",
+      "events"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Nifty 2004-2023, 24 Budgets: up on day before 67%, Budget day 46%, day after 63% (Bank Nifty 71%, 50%, 67%). Average Budget-day move since 2010 +0.19% Nifty, +0.42% Bank Nifty; slightly negative in each of 2023-2025. One month after (2016-2025): about half up, half down.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "One index-ETF order each way; no margin, no shorting, about 0.10% round trip at Rs 1.5 lakh (brokerage Rs 20 per order, ETF sell STT 0.001%). Two or three trades a year; 24-event sample cannot distinguish 67% from chance.",
+    "sources": [
+      "https://upstox.com/news/market-news/trading/how-do-major-indices-react-to-union-budget/article-65567",
+      "https://www.businesstoday.in/markets/stocks/story/nifty-bank-nifty-budget-day-stock-market-returns-since-2010-full-table-512707-2026-01-23",
+      "https://www.businesstoday.in/union-budget/story/why-budget-day-returns-are-mostly-muted-should-investors-bet-on-a-post-budget-rally-512931-2026-01-27",
+      "https://www.swastika.co.in/big-budget-day/nifty-50-performance-one-month-after-union-budget-10-year-reality-check"
+    ]
+  },
+  {
+    "id": "seasonality__event_iv_crush",
+    "name": "Scheduled-event implied-volatility crush (Budget, election result, RBI)",
+    "family": "scheduled_event_volatility",
+    "rule": "At the close of the last session before a scheduled event sell one-lot Nifty iron butterfly (ATM short strikes, wings wing_pct away) in the nearest expiry after the event. Close at exit_day close or at loss of stop_mult x credit. Mirror test: buy ATM straddle long_days_before sessions earlier, sell day before event.",
+    "params": {
+      "events": [
+        "union_budget",
+        "lok_sabha_result",
+        "rbi_policy"
+      ],
+      "wing_pct": 2.5,
+      "exit_day": "event_day_close",
+      "stop_mult": 1.0,
+      "long_days_before": 7,
+      "lots": 1
+    },
+    "instruments": "Nifty options (lot 65), hedged",
+    "holding_period": "1 to 2 trading days, a few times a year",
+    "data_needed": [
+      "daily_fo",
+      "daily_index",
+      "events"
+    ],
+    "evidence": "anecdotal",
+    "india_evidence": true,
+    "reported_performance": "No measured study found. India VIX is reported to rise before Budgets and to collapse after election exit polls (headlines only). India VIX falls significantly on expiry days (Shaikh & Padhi 2015).",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Defined-risk one-lot structure fits, but events are when realised moves can exceed implied; a handful of trades a year with all-or-nothing sizing.",
+    "sources": [
+      "https://upstox.com/news/market-news/trading/how-do-major-indices-react-to-union-budget/article-65567",
+      "https://ceeol.com/search/article-detail?id=285053"
+    ]
+  },
+  {
+    "id": "seasonality__rbi_policy_day",
+    "name": "RBI policy announcement drift",
+    "family": "scheduled_event",
+    "rule": "For each scheduled RBI MPC announcement day A: test (a) buy index or bank ETF at close of A-pre_days, sell at close of A-1; (b) buy at close of A, sell at close of A+post_days. No stop.",
+    "params": {
+      "pre_days": 5,
+      "post_days": 5,
+      "instrument_variants": [
+        "NIFTYBEES",
+        "BANKBEES"
+      ]
+    },
+    "instruments": "NIFTYBEES or BANKBEES",
+    "holding_period": "1 to 5 trading days, six times a year",
+    "data_needed": [
+      "daily_index",
+      "daily_equity",
+      "events"
+    ],
+    "evidence": "negative",
+    "india_evidence": true,
+    "reported_performance": "No robust drift found. Literature summaries: only unanticipated 'path' surprises move equities on announcement days; an unreviewed 2015-2025 dashboard of 26 decisions suggests about +0.14% in the 5 days before and -0.27% on the day (snippet only; values not rendered on the opened page).",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Six short ETF trades a year; no evidence of an edge.",
+    "sources": [
+      "https://rohanbeingsocial.github.io/repoeffectonmarket/"
+    ]
+  },
+  {
+    "id": "seasonality__fomc_next_day_long",
+    "name": "FOMC next-day long in Nifty",
+    "family": "scheduled_event",
+    "rule": "For each scheduled FOMC statement date D (US date): buy index ETF at the NSE close on D (the Indian session that ends before the 14:00 ET statement); sell at the NSE close of the next Indian session. If D is an NSE holiday use the previous session. No stop. Eight trades a year.",
+    "params": {
+      "exit": "next_close",
+      "alt_exit": "next_open",
+      "only_scheduled_meetings": true
+    },
+    "instruments": "NIFTYBEES",
+    "holding_period": "1 trading day, 8 times a year",
+    "data_needed": [
+      "daily_index",
+      "daily_equity",
+      "events"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "Lakdawala (NSE-NYU), Nifty Jan 1991-Jun 2018: mean 0.33% on the day after FOMC vs 0.03% other days (constant 0.347, t=3.47, n=234). By period: 2000-2008 0.72% (t=4.65); 2009-2018 0.215% (t=1.66). Worst cases -4.26% (Sep 2011), -2.94% (Jun 2013).",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "One index-ETF order each way; no margin, no shorting, about 0.10% round trip at Rs 1.5 lakh (brokerage Rs 20 per order, ETF sell STT 0.001%). Eight trades cost about 0.8% a year against roughly 1.6-2.6% gross at post-2008 magnitudes; needs a maintained FOMC date list.",
+    "sources": [
+      "https://nsearchives.nseindia.com/research/content/nse_nyu/white_paper_2017_18_7.pdf",
+      "https://www.newyorkfed.org/medialibrary/media/research/staff_reports/sr512.pdf",
+      "https://libertystreeteconomics.newyorkfed.org/?p=312",
+      "https://bsic.it/the-pre-fomc-drift-in-emerging-markets/",
+      "https://quantpedia.com/strategies/federal-open-market-committee-meeting-effect-in-stocks",
+      "https://quantpedia.com/quantpedias-composite-seasonalcalendar-strategy-case-study/"
+    ]
+  },
+  {
+    "id": "seasonality__lok_sabha_election_window",
+    "name": "Lok Sabha election window",
+    "family": "political_cycle",
+    "rule": "Buy index ETF months_before months before the first polling day of a general election; sell months_after months after it. Conservative variant: buy at close of result day, hold months_after months. Hold no short-option or leveraged position over result day.",
+    "params": {
+      "months_before": 6,
+      "months_after": 6,
+      "variant": "post_result_only"
+    },
+    "instruments": "NIFTYBEES",
+    "holding_period": "6 to 12 months, once every 5 years",
+    "data_needed": [
+      "daily_index",
+      "events"
+    ],
+    "evidence": "anecdotal",
+    "india_evidence": true,
+    "reported_performance": "IndiaSpend: Nifty and Sensex were higher six months after than six months before each of the four elections 1999-2014 (average 40.8%). Ambit: Sensex about 33%/yr in the 3 years after three key elections vs 16% over 30 years; follow-through absent in 2015-16. Five or six observations.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Single ETF trade; next general election due 2029, so not actionable before late 2028; sample far too small to test.",
+    "sources": [
+      "https://www.thequint.com/elections/why-nifty-sensex-rose-after-every-general-election-since-1999",
+      "https://freefincal.com/lok-sabha-elections-stock-market-returns/"
+    ]
+  },
+  {
+    "id": "seasonality__monsoon_seasonal",
+    "name": "Monsoon seasonal sector trade",
+    "family": "weather_cycle",
+    "rule": "Hold a monsoon-sensitive sector index (FMCG, Auto) from first trading day of June to last trading day of September, Nifty ETF otherwise. Conditional variant: hold the sector only if cumulative Jun-Aug all-India rainfall is at least rain_threshold_pct of the long-period average.",
+    "params": {
+      "start_month": 6,
+      "end_month": 9,
+      "sectors": [
+        "NIFTY FMCG",
+        "NIFTY AUTO"
+      ],
+      "rain_threshold_pct": 100
+    },
+    "instruments": "Sector ETF or index",
+    "holding_period": "4 months, once a year",
+    "data_needed": [
+      "daily_index",
+      "other"
+    ],
+    "evidence": "negative",
+    "india_evidence": true,
+    "reported_performance": "Pandey et al. (Mendeley Data 2026), five sector indices: monsoon effects 'inconsistent and limited'; regressions insignificant; a Seasonal Long-Only strategy underperformed buy-and-hold. Regime-switching variants beat it in their own backtest (rules not published).",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "One sector-ETF switch a year where a liquid ETF exists; the evidence is against the simple seasonal version.",
+    "sources": [
+      "https://data.mendeley.com/datasets/tkt4zj38xt/1"
+    ]
+  },
+  {
+    "id": "seasonality__expiry_week_long",
+    "name": "Expiry-week and day-after-expiry long",
+    "family": "expiry",
+    "rule": "E = monthly F&O expiry date from contract master. Leg 1: buy index ETF at the close pre_days sessions before E, sell at close of E. Leg 2 (day-after): buy at close of E, sell at next close. Test legs separately.",
+    "params": {
+      "pre_days": 5,
+      "post_days": 1,
+      "expiry_source": "contract_master"
+    },
+    "instruments": "NIFTYBEES",
+    "holding_period": "1 to 5 trading days, monthly",
+    "data_needed": [
+      "daily_index",
+      "daily_equity",
+      "daily_fo"
+    ],
+    "evidence": "negative",
+    "india_evidence": true,
+    "reported_performance": "US S&P 100 1988-2010: 0.528% average in expiry weeks, 9.3%/yr incl. cash, Sharpe 0.61. India: Bank Nifty 2010-2020 shows no expiry effect on mean returns, volatility or reversal; other Indian studies find volume and last-half-hour volatility effects, mixed on returns. Nifty tends to be lower at expiry than on the next first trading day.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "One index-ETF order each way; no margin, no shorting, about 0.10% round trip at Rs 1.5 lakh (brokerage Rs 20 per order, ETF sell STT 0.001%). Indian evidence gives no return edge before expiry; the day-after leg overlaps turn-of-month.",
+    "sources": [
+      "https://quantpedia.com/strategies/option-expiration-week-effect",
+      "https://quantpedia.com/quantpedias-composite-seasonalcalendar-strategy-case-study/",
+      "https://koreascience.kr/article/JAKO202032462596875.page",
+      "https://iima.ac.in/sites/default/files/rnpfiles/19191060542012-11-03.pdf",
+      "https://www.business-standard.com/article/markets/expiration-day-affectes-spot-market-volatility-on-stock-exchanges-study-113091500770_1.html",
+      "https://arxiv.org/html/2507.04859v2",
+      "https://nsearchives.nseindia.com/content/circulars/FAOP68747.pdf"
+    ]
+  },
+  {
+    "id": "seasonality__expiry_day_short_premium",
+    "name": "Expiry-day short premium (0DTE iron fly)",
+    "family": "expiry_volatility",
+    "rule": "On Nifty weekly expiry day at entry_time sell ATM call and put expiring today and buy wings wing_pct away, one lot. Per-leg stop when premium rises leg_stop_pct above entry. Exit all by exit_time. Daily-data proxy: sell at option open price, settle at final settlement, no stop.",
+    "params": {
+      "entry_time": "09:20",
+      "exit_time": "15:00",
+      "wing_pct": 1.0,
+      "leg_stop_pct": 30,
+      "lots": 1
+    },
+    "instruments": "Nifty weekly options expiring same day (lot 65)",
+    "holding_period": "intraday, weekly (Tuesday)",
+    "data_needed": [
+      "intraday",
+      "daily_fo"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "No reproducible study found. India VIX falls on expiry days (Shaikh & Padhi 2015); volatility rises in the last half-hour of expiry day (Agarwalla & Pandey). Market changed: one weekly index per exchange since Nov 2024, Tuesday expiry since Sep 2025, option STT 0.15% since Apr 2026.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "One hedged lot fits the margin (not verified) but is all-or-nothing risk about 50 days a year; needs intraday option data for stops; pre-2025 backtests describe a different market.",
+    "sources": [
+      "https://ceeol.com/search/article-detail?id=285053",
+      "https://iima.ac.in/sites/default/files/rnpfiles/19191060542012-11-03.pdf",
+      "https://www.phonepeinvest.com/buzz/insights/weekly-expiry-days-in-indian-fo-markets/",
+      "https://nsearchives.nseindia.com/content/circulars/FAOP68747.pdf",
+      "https://cleartax.in/s/securities-transaction-tax-stt"
+    ]
+  },
+  {
+    "id": "seasonality__quarter_end_window_dressing",
+    "name": "Quarter-end window dressing in recent winners",
+    "family": "quarter_end",
+    "rule": "entry_days trading days before each quarter end (Mar, Jun, Sep, Dec) buy the top_n Nifty Midcap 150 stocks by lookback_days return, equal weight; sell at the close of the last trading day of the quarter. Reversal test: measure those names' return over the first two sessions of the new quarter.",
+    "params": {
+      "entry_days": 5,
+      "top_n": 10,
+      "lookback_days": 60,
+      "universe": "NIFTY MIDCAP 150"
+    },
+    "instruments": "Mid-cap stocks, delivery",
+    "holding_period": "5 trading days, quarterly",
+    "data_needed": [
+      "daily_equity"
+    ],
+    "evidence": "anecdotal",
+    "india_evidence": true,
+    "reported_performance": "IIM Calcutta thesis (abstract): Indian equity funds window-dress; risk-reducing dressing is about three times as common as buying winners; done mainly by poor performers. No Indian study of quarter-end price pressure found; funds disclose monthly.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Ten Rs 15,000 positions for five days cost about 0.6% each round trip; evidence for a price effect is absent.",
+    "sources": [
+      "https://studentlive.iimcal.ac.in/sites/all/files/pdfs/abstract_bobbur_abhilash_chowdary.pdf",
+      "https://www.angelone.in/exchange-transaction-charges"
+    ]
+  },
+  {
+    "id": "seasonality__composite_calendar_trend_filter",
+    "name": "Composite calendar windows with 200-day trend filter",
+    "family": "composite",
+    "rule": "Each day be long index ETF if the day falls in any enabled window (turn-of-month 5th-last to 3rd day; FOMC next day; day before and after Budget; post-holiday day; Muhurat) AND ETF close on entry day > its 200-day SMA; otherwise hold liquid ETF. No leverage when windows overlap.",
+    "params": {
+      "windows": [
+        "turn_of_month",
+        "fomc_next_day",
+        "budget_window",
+        "post_holiday",
+        "muhurat"
+      ],
+      "trend_sma_days": 200,
+      "use_trend_filter": true
+    },
+    "instruments": "NIFTYBEES and a liquid ETF",
+    "holding_period": "1 to 8 trading days per window",
+    "data_needed": [
+      "daily_index",
+      "daily_equity",
+      "events"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "Quantpedia, SPY 1993-2019 (TOM + FOMC + option-expiry week + payday): 9.06%/yr, max DD 24.02% without filter; 7.47%/yr, max DD 10.14% with 200-day filter. No Indian test of the composite.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "One index-ETF order each way; no margin, no shorting, about 0.10% round trip at Rs 1.5 lakh (brokerage Rs 20 per order, ETF sell STT 0.001%). About 12-25 round trips a year, 1.2-2.5% a year of cost.",
+    "sources": [
+      "https://quantpedia.com/quantpedias-composite-seasonalcalendar-strategy-case-study/",
+      "https://inthemoneybyzerodha.substack.com/p/turn-of-the-month-tomtotm-strategy"
+    ]
+  }
+]

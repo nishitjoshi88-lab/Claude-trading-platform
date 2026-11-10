@@ -1,0 +1,956 @@
+[
+  {
+    "id": "event_driven__pead_sue_long_only",
+    "name": "Post-earnings-announcement drift on earnings surprise (long-only)",
+    "family": "event_driven",
+    "rule": "Universe Nifty 500, price>50. On each quarterly result compute UE=(EPS_q-EPS_q4)/close[day-2]. Rank against previous quarter's cross-sectional quartile breakpoints. If top quartile, buy at open of day+2 (day0 = first session able to react). Hold 63 trading days or until next result. Equal weight, max 6 names, oldest replaced. Optional 15% stop.",
+    "params": {
+      "universe": "NIFTY500",
+      "surprise": "seasonal_diff_over_price",
+      "top_fraction": 0.25,
+      "entry_day": 2,
+      "hold_days": 63,
+      "max_positions": 6,
+      "stop_pct": 15,
+      "min_price": 50
+    },
+    "instruments": "NSE cash equities (delivery)",
+    "holding_period": "about 63 trading days",
+    "data_needed": [
+      "daily_equity",
+      "fundamentals",
+      "events"
+    ],
+    "evidence": "strong_academic",
+    "india_evidence": true,
+    "reported_performance": "India 2008-2014 (18,269 announcements): market-adjusted return days +2..+64 was +0.7% for top UE quartile, -6.6% for bottom; spread 7.3%. BSE 2001-2006 (Sen 2009): quintile spread 10.05% per quarter. India 2014-2018 (100 NSE firms): no exploitable drift.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Fully implementable long-only with small positions, but the Indian long leg earned under 1% a quarter over the index, less than the 0.5% round-trip cost plus tax; most of the spread is on the unshortable side.",
+    "sources": [
+      "https://nsearchives.nseindia.com/research/content/NSE-IGIDR-WP4-14-15.pdf",
+      "https://journals.lib.vutbr.cz/index.php/trends/article/view/541",
+      "https://quantpedia.com/strategies/post-earnings-announcement-effect/",
+      "https://business.columbia.edu/sites/default/files-efs/imce-uploads/CEASA/Events%20Page/PEAD_Declined_over_time.pdf"
+    ]
+  },
+  {
+    "id": "event_driven__earnings_announcement_return_drift",
+    "name": "Earnings-announcement-return (EAR) drift, alone or intersected with SUE",
+    "family": "event_driven",
+    "rule": "Universe Nifty 500, price>50. EAR = stock return minus Nifty 500 return over sessions day-1..day+1 around the result. Quintile breakpoints from previous quarter. Long if EAR in top quintile (if require_sue: also SUE in top quintile). Buy at open of day+2, hold 60 trading days, equal weight, max 6 positions.",
+    "params": {
+      "universe": "NIFTY500",
+      "ear_window": [
+        -1,
+        1
+      ],
+      "top_fraction": 0.2,
+      "require_sue": false,
+      "entry_day": 2,
+      "hold_days": 60,
+      "max_positions": 6,
+      "min_price": 50
+    },
+    "instruments": "NSE cash equities (delivery)",
+    "holding_period": "60 trading days",
+    "data_needed": [
+      "daily_equity",
+      "daily_index",
+      "events",
+      "fundamentals"
+    ],
+    "evidence": "strong_academic",
+    "india_evidence": false,
+    "reported_performance": "US 1987-2004 (Brandt et al. via Quantpedia): EAR long-short 7.55%/yr abnormal; EAR-and-SUE intersection +2.97% long vs -0.58% short per 60 days (about 15%/yr); max drawdown -11.2%; weaker but present in 1,000 largest firms.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Needs only prices and result dates and trades long-only, but no Indian test exists and the entry is after a gap; edge must exceed about 0.5% costs per trade.",
+    "sources": [
+      "https://quantpedia.com/strategies/post-earnings-announcement-effect/",
+      "https://nsearchives.nseindia.com/research/content/NSE-IGIDR-WP4-14-15.pdf"
+    ]
+  },
+  {
+    "id": "event_driven__price_volume_shock_drift_proxy",
+    "name": "Price-and-volume shock drift (earnings-gap proxy from daily bars)",
+    "family": "event_driven",
+    "rule": "Universe Nifty 500, price>50. Signal day t: open >= 1.04*prev close, close in top 30% of day range, volume >= 3x 50-day average, close > 200-day SMA, Nifty 500 > its 200-day SMA. Buy open t+1. Exit after 20 trading days or on close below low of day t. Max 5 positions, equal weight.",
+    "params": {
+      "gap_pct": 4,
+      "range_position_min": 0.7,
+      "volume_mult": 3,
+      "vol_lookback": 50,
+      "trend_sma": 200,
+      "hold_days": 20,
+      "stop": "gap_day_low",
+      "max_positions": 5
+    },
+    "instruments": "NSE cash equities (delivery)",
+    "holding_period": "5 to 60 trading days",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "No sampled, cost-adjusted result found (searched Nov 2026); practitioner descriptions only. Underlying drift evidence is the US EAR result for 1987-2004.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Long-only, liquid universe, 5 positions of about Rs 30,000; unproven and included because it is testable from daily OHLCV alone.",
+    "sources": [
+      "https://quantpedia.com/strategies/post-earnings-announcement-effect/"
+    ]
+  },
+  {
+    "id": "event_driven__earnings_revenue_price_triple_momentum",
+    "name": "Triple-sorted momentum: price, earnings surprise, revenue surprise",
+    "family": "event_driven",
+    "rule": "Universe Nifty 500. Monthly, rank on (a) prior 6-month return, (b) latest earnings surprise, (c) latest revenue surprise (year-on-year seasonal change, standardised). Long stocks in top tercile on all three; hold 6 months in overlapping monthly cohorts; equal weight; max 10 names. Breakpoints not given in abstract: test terciles and quintiles.",
+    "params": {
+      "universe": "NIFTY500",
+      "price_lookback_months": 6,
+      "top_fraction": 0.33,
+      "hold_months": 6,
+      "rebalance": "monthly",
+      "max_positions": 10
+    },
+    "instruments": "NSE cash equities (delivery)",
+    "holding_period": "1 to 6 months",
+    "data_needed": [
+      "daily_equity",
+      "fundamentals",
+      "events"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "BSE 500 (493 firms), Jan 2002-Jun 2010 (Sehgal and Jain 2015): triple-sorted portfolio 2.28% per month, gross; earnings momentum most profitable long-short; reversal after holding period.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Long-only monthly rotation of up to 10 small positions is workable; sample is old and gross, turnover costs 2-4% a year.",
+    "sources": [
+      "https://ejournal.usm.my/aamjaf/article/view/aamjaf_vol11-no1-2015_3"
+    ]
+  },
+  {
+    "id": "event_driven__negative_surprise_exit_or_short",
+    "name": "Negative earnings surprise: exit overlay or futures short",
+    "family": "event_driven",
+    "rule": "After a result with UE in bottom quartile (previous-quarter breakpoints) or 3-day announcement return in bottom quintile: overlay mode sells any holding and blocks buys for 63 trading days; short mode sells near-month stock future at open of day+2, holds 63 trading days with one roll, stop +12%.",
+    "params": {
+      "bottom_fraction": 0.25,
+      "block_days": 63,
+      "mode": "overlay",
+      "short_stop_pct": 12
+    },
+    "instruments": "Overlay on cash holdings; single-stock futures for the short",
+    "holding_period": "63 trading days",
+    "data_needed": [
+      "daily_equity",
+      "daily_fo",
+      "fundamentals",
+      "events"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "India 2008-2014: bottom UE quartile -6.6% market-adjusted over days +2..+64; second quartile -2.0%.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Overlay is free and usable; the short needs one stock-futures lot whose margin can exceed the whole account, so the profitable leg is not accessible.",
+    "sources": [
+      "https://nsearchives.nseindia.com/research/content/NSE-IGIDR-WP4-14-15.pdf"
+    ]
+  },
+  {
+    "id": "event_driven__hold_through_results_day",
+    "name": "Holding through the results announcement (announcement premium)",
+    "family": "event_driven",
+    "rule": "Buy at close two sessions before a scheduled results date; sell at close one session after. Optional filter: previous quarter's UE in top quartile. Max 5 concurrent positions.",
+    "params": {
+      "entry_offset": -2,
+      "exit_offset": 1,
+      "prev_ue_filter": false,
+      "max_positions": 5
+    },
+    "instruments": "NSE cash equities",
+    "holding_period": "3 trading days",
+    "data_needed": [
+      "daily_equity",
+      "events"
+    ],
+    "evidence": "negative",
+    "india_evidence": true,
+    "reported_performance": "India 2008-2014 (18,269 announcements): mean 3-day market-adjusted return -0.5%, median -0.7%, about 57% negative.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Mechanically easy, but the measured expectation is negative before 0.5% costs; listed so a backtest can close the idea.",
+    "sources": [
+      "https://nsearchives.nseindia.com/research/content/NSE-IGIDR-WP4-14-15.pdf"
+    ]
+  },
+  {
+    "id": "event_driven__analyst_buy_recommendation_drift",
+    "name": "Analyst BUY recommendation drift",
+    "family": "event_driven",
+    "rule": "Universe Nifty 100. Event: new BUY or upgrade to BUY from a broker. Buy next open, hold 20 trading days, equal weight, max 5 positions, at most one entry per stock per 20 days. Ignore SELL calls.",
+    "params": {
+      "universe": "NIFTY100",
+      "hold_days": 20,
+      "max_positions": 5,
+      "cooldown_days": 20
+    },
+    "instruments": "NSE cash equities",
+    "holding_period": "2 to 12 weeks",
+    "data_needed": [
+      "daily_equity",
+      "events",
+      "other"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "Nifty 50 firms 2012-2018 (Moulya and Mallikarjunappa): no announcement-day reaction, delayed drift after BUY calls; magnitude not extracted. IIMB study: target hits driven by market moves, not analyst insight.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Capital is sufficient; the obstacle is a timestamped recommendations feed and a signal that fires constantly because most calls are BUY.",
+    "sources": [
+      "https://www.cukerala.ac.in/cukpdfs/IQAC/3.4.5/3.4.5.DCIB.001.pdf",
+      "https://www.iimb.ac.in/imr/previous-issues/time-june-2020.php"
+    ]
+  },
+  {
+    "id": "event_driven__insider_promoter_buying",
+    "name": "Promoter and insider open-market buying (PIT disclosures)",
+    "family": "event_driven",
+    "rule": "Universe NSE stocks, market cap 500-20,000 crore, turnover>2 crore/day. Event: PIT Reg 7 disclosure, category promoter/director/KMP, mode market purchase, value >= 1 crore. Prefer >=2 insiders within 30 days and negative prior 3-month return. Buy next open after exchange disclosure. Hold 90 trading days. Max 6 positions, equal weight, 20% stop.",
+    "params": {
+      "min_value_cr": 1.0,
+      "cluster_window_days": 30,
+      "min_insiders": 1,
+      "hold_days": 90,
+      "max_positions": 6,
+      "stop_pct": 20,
+      "mcap_range_cr": [
+        500,
+        20000
+      ]
+    },
+    "instruments": "NSE cash equities (delivery)",
+    "holding_period": "3 to 12 months",
+    "data_needed": [
+      "daily_equity",
+      "events"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "India 2008-2014 (about 32,000 insider trade days): buys -0.20% market-adjusted at 1 month; buy-minus-sell spread 1.53% at 3 months and 8.22% at 1 year, mostly from sells. 2026 study: +6.67% over 90 days after purchases (unverified: snippet only).",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Slow long-only signal, free NSE data, positions of Rs 25,000 are fine; expect modest edge and filter out non-market acquisitions.",
+    "sources": [
+      "https://nsearchives.nseindia.com/research/content/NSE-IGIDR-WP4-14-15.pdf"
+    ]
+  },
+  {
+    "id": "event_driven__red_flag_exclusion_overlay",
+    "name": "Red-flag exclusion overlay: insider selling, pledge increase, rating downgrade",
+    "family": "event_driven",
+    "rule": "Exclude a stock from all long universes: 250 trading days after net insider/promoter market sales > 1 crore within 30 days; while promoter pledge > 25% of promoter holding or after a rise of >= 5 points quarter on quarter; 60 trading days after a long-term rating downgrade by CRISIL/ICRA/CARE. Ignore upgrades.",
+    "params": {
+      "insider_sell_cr": 1.0,
+      "insider_block_days": 250,
+      "pledge_level_pct": 25,
+      "pledge_rise_pts": 5,
+      "downgrade_block_days": 60
+    },
+    "instruments": "Filter applied to other strategies",
+    "holding_period": "not applicable",
+    "data_needed": [
+      "events",
+      "fundamentals"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "Insider sells precede declines (8.22% 1-year buy-sell spread, 2008-2014). Pledging raises crash risk (257 BSE 500 firms, 2011-2020). Downgrades: negative returns mostly before the announcement (top 100 NSE firms 2009-2019; banks study 2023).",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "No capital or trading cost; needs insider, pledge and rating feeds.",
+    "sources": [
+      "https://nsearchives.nseindia.com/research/content/NSE-IGIDR-WP4-14-15.pdf",
+      "https://ideas.repec.org/a/eme/jamrpp/jamr-01-2023-0003.html",
+      "https://som.iitkgp.ac.in/pdf/Working%20Paper/Kousik%20Ganguly_1.pdf",
+      "https://econpapers.repec.org/RePEc:sae:busper:v:11:y:2023:i:2:p:190-209",
+      "https://econpapers.repec.org/RePEc:ids:afasfa:v:13:y:2023:i:1:p:41-53"
+    ]
+  },
+  {
+    "id": "event_driven__bulk_deal_buy_follow",
+    "name": "Following bulk-deal buyers",
+    "family": "event_driven",
+    "rule": "Event: NSE bulk-deal file shows a client buying >0.5% of equity in a stock with no bulk sell that day (Only Buy). Buy at next open; sell at close after 5 trading days. Price>20, turnover>2 crore.",
+    "params": {
+      "hold_days": 5,
+      "min_price": 20,
+      "only_buy": true
+    },
+    "instruments": "NSE cash equities",
+    "holding_period": "1 to 7 days",
+    "data_needed": [
+      "daily_equity",
+      "events"
+    ],
+    "evidence": "negative",
+    "india_evidence": true,
+    "reported_performance": "NSE 2010-2019 (Rajvanshi; 1,804 single-investor Only-Buy deals): +3.46% on deal day, +0.71% day +1, then negative each day +2..+7 (about -1.1%); partial-buy deals about -2.0% over days +2..+7.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Easy to trade, but the disclosure arrives after the move and the following drift is negative before costs.",
+    "sources": [
+      "https://studentlive.iimcal.ac.in/sites/all/files/pdfs/wp_863.pdf",
+      "https://econpapers.repec.org/RePEc:eee:ememar:v:23:y:2015:i:c:p:26-45",
+      "https://nsearchives.nseindia.com/content/equities/bulk.csv"
+    ]
+  },
+  {
+    "id": "event_driven__bulk_deal_sell_rebound",
+    "name": "Rebound after bulk-deal selling",
+    "family": "event_driven",
+    "rule": "Event: Only Sell bulk deal (client sells >0.5% of equity, no bulk buy that day) and stock closed down on deal day. Price>20, turnover>2 crore. Buy next open; sell at close after 5 trading days; 5% stop.",
+    "params": {
+      "hold_days": 5,
+      "stop_pct": 5,
+      "min_price": 20
+    },
+    "instruments": "NSE cash equities",
+    "holding_period": "3 to 7 days",
+    "data_needed": [
+      "daily_equity",
+      "events"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "NSE 2010-2019: single-investor Only-Sell deals (N=2,831) -0.87% on deal day then about +1.0% cumulative over days +1..+7; multi-investor (N=77) +1.63% and +1.51% on days +1 and +2.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "About 1.0% gross is consumed by 0.5% round-trip cost and the opening gap; only worth testing on larger down-moves.",
+    "sources": [
+      "https://studentlive.iimcal.ac.in/sites/all/files/pdfs/wp_863.pdf"
+    ]
+  },
+  {
+    "id": "event_driven__block_deal_informed_buyer",
+    "name": "Block-deal purchases by long-term institutions or insiders",
+    "family": "event_driven",
+    "rule": "Event: block-window purchase where buyer is a mutual fund, insurer, pension/sovereign fund or promoter entity and seller is not a promoter. Buy next open; hold 3 trading days (test 20). Max 3 positions.",
+    "params": {
+      "hold_days": 3,
+      "buyer_types": [
+        "mutual_fund",
+        "insurer",
+        "pension",
+        "sovereign",
+        "promoter"
+      ],
+      "max_positions": 3
+    },
+    "instruments": "NSE cash equities (large and mid cap)",
+    "holding_period": "3 to 20 days",
+    "data_needed": [
+      "daily_equity",
+      "events",
+      "other"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "India 2005-2015 (2,547 buy-side block trades): 3-day Fama-French-adjusted return positive for purchases by pressure-resistant institutions and insiders, stronger after 2010; magnitude not legible in extract.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Liquid names and small positions are fine, but the window is centred on the trade so the public follower gets less; costs 0.5% on a 3-day hold.",
+    "sources": [
+      "https://nsearchives.nseindia.com/research/content/NSE-IGIDR_CG_RPaper_2015-16_WP4.pdf",
+      "https://nsearchives.nseindia.com/content/equities/block.csv"
+    ]
+  },
+  {
+    "id": "event_driven__index_inclusion_announce_to_effective",
+    "name": "Index inclusion: announcement to effective date (Nifty 50, Next 50, MSCI India)",
+    "family": "event_driven",
+    "rule": "Event: official addition announcement (NSE Indices press release after hours; MSCI about 03:30 IST). Buy at open of first session after announcement unless gap > 5%. Sell at close of last session before effective date (ED-1). Never hold past ED-1. 30% of capital per event, max 3 concurrent.",
+    "params": {
+      "indices": [
+        "NIFTY50",
+        "NIFTYNEXT50",
+        "MSCI_INDIA"
+      ],
+      "max_gap_pct": 5,
+      "exit": "close_ED_minus_1",
+      "weight_per_event": 0.3,
+      "max_positions": 3
+    },
+    "instruments": "NSE cash equities (delivery)",
+    "holding_period": "10 to 25 trading days",
+    "data_needed": [
+      "daily_equity",
+      "events"
+    ],
+    "evidence": "strong_academic",
+    "india_evidence": true,
+    "reported_performance": "MSCI, 56 markets 2006-2023: long adds/short deletes from announcement close to ED-1 close about 5.4% (6.1% Asia-Pacific) after lending fees. Nifty 1996-2003: no announcement effect, +1.47% effective day, reversed by day 9. Nifty 2000-2016: inclusion gains reverse within 60 days.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Liquid stocks, long-only, few events (1-4 Nifty 50 and roughly 15-30 MSCI India additions a year); Indian evidence is mixed and the published figure includes a short leg.",
+    "sources": [
+      "https://nsearchives.nseindia.com/content/indices/Method_NIFTY_Equity_Indices.pdf",
+      "https://niftyindices.com/Press_Release/ind_prs23022026.pdf",
+      "https://www.ntu.edu.sg/business/research/nbs-knowledge-lab/nbs-research-blog/index-tracking-rigidity-and-arbitrage-opportunities-in-msci-index-reconstitutions",
+      "https://nsearchives.nseindia.com/content/research/comppaper90.pdf",
+      "https://ideas.repec.org/a/ids/afasfa/v5y2015i1p21-36.html",
+      "https://www.publishingindia.com/archive/jcar/price-and-volume-effects-of-nifty-50-index-reorganization",
+      "https://www.jmfinancialservices.in/blogs-and-articles/bse-replaces-wipro-in-nifty-50-sept-2026",
+      "https://alphaarchitect.com/disappearing-index-effect/",
+      "https://www.marketcalls.in/investment/msci-rebalancing-explained-a-comprehensive-guide-for-indian-investors-and-traders.html"
+    ]
+  },
+  {
+    "id": "event_driven__index_deletion_rebound",
+    "name": "Index deletion rebound",
+    "family": "event_driven",
+    "rule": "Event: stock removed from Nifty 50 or MSCI India for size/liquidity reasons (skip mergers, delistings, suspensions, regulatory removals). Buy at close of last session before effective date. Hold 120 trading days. 25% of capital per name, 20% stop. Optional filter: trailing 12-month profit positive.",
+    "params": {
+      "indices": [
+        "NIFTY50",
+        "MSCI_INDIA"
+      ],
+      "entry": "close_ED_minus_1",
+      "hold_days": 120,
+      "weight_per_event": 0.25,
+      "stop_pct": 20,
+      "profit_filter": false
+    },
+    "instruments": "NSE cash equities (delivery)",
+    "holding_period": "3 to 12 months",
+    "data_needed": [
+      "daily_equity",
+      "events"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "Nifty 50 2000-2016: excluded stocks +4% to +7% abnormal over 60-240 days. MSCI India 2015-2019: +16% one year after exclusion vs +8% after inclusion. Nifty 50 last five years to 2026: 7 of 10 deletions up after 6 months, 9 of 10 after a year.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Long-only, liquid, very low turnover; only 2-4 Nifty 50 events a year and small samples.",
+    "sources": [
+      "https://www.publishingindia.com/archive/jcar/price-and-volume-effects-of-nifty-50-index-reorganization",
+      "https://insights.dsij.in/dsijarticledetail/msci-india-index-rebalancing-and-returns-10213",
+      "https://www.jmfinancialservices.in/blogs-and-articles/bse-replaces-wipro-in-nifty-50-sept-2026",
+      "https://nsearchives.nseindia.com/content/research/comppaper90.pdf"
+    ]
+  },
+  {
+    "id": "event_driven__index_inclusion_prediction_prepositioning",
+    "name": "Pre-positioning in predicted Nifty 50 additions",
+    "family": "event_driven",
+    "rule": "On first trading day after cut-off (1 Feb, 1 Aug): candidates = Nifty 100 members in F&O, not in Nifty 50, with 6-month average free-float market cap >= 1.5x that of the smallest Nifty 50 constituent, 100% trading frequency, impact cost <= 0.50%. Buy top-ranked candidate; sell at close on announcement day. 25% of capital, max 2 names.",
+    "params": {
+      "cutoff_dates": [
+        "01-31",
+        "07-31"
+      ],
+      "ffmc_multiple": 1.5,
+      "max_impact_cost_pct": 0.5,
+      "exit": "announcement_close",
+      "weight": 0.25,
+      "max_positions": 2
+    },
+    "instruments": "NSE cash equities (delivery)",
+    "holding_period": "3 to 8 weeks",
+    "data_needed": [
+      "daily_equity",
+      "daily_index",
+      "fundamentals",
+      "events"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "No tested Indian result. Broker claim of 8-15% excess return in the 20 days before MSCI announcements (unverified: snippet only). US: pre-announcement run-ups became somewhat stronger as the announcement effect vanished (1980-2020).",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Capital is enough for one or two liquid names, but it needs free-float data, yields one or two trades a year and overlaps with plain momentum.",
+    "sources": [
+      "https://nsearchives.nseindia.com/content/indices/Method_NIFTY_Equity_Indices.pdf",
+      "https://www.jmfinancialservices.in/blogs-and-articles/bse-replaces-wipro-in-nifty-50-sept-2026",
+      "https://alphaarchitect.com/disappearing-index-effect/"
+    ]
+  },
+  {
+    "id": "event_driven__fo_inclusion_exclusion",
+    "name": "F&O list inclusion and exclusion",
+    "family": "event_driven",
+    "rule": "Inclusion date = first day a symbol appears in the F&O bhavcopy (or circular date if available). Buy cash stock at open after the circular; sell at close of first F&O trading day. Exclusion flag = symbol has no contract for newest expiry month while others do: exit and block buys.",
+    "params": {
+      "entry": "open_after_circular",
+      "exit": "close_first_fo_day",
+      "alt_hold_days": 20
+    },
+    "instruments": "NSE cash equities",
+    "holding_period": "2 to 6 weeks",
+    "data_needed": [
+      "daily_equity",
+      "daily_fo",
+      "events"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "India 2001-2020 event study: positive reaction on inclusion, negative on exclusion (unverified: snippet only). Dec 2021/Jan 2022 additions: 6-month post-inclusion returns mostly negative (e.g. -27%, -30%, -18%, -15%; two clear gainers).",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Tradable long-only in liquid names; events are lumpy and evidence of any sustained gain is absent.",
+    "sources": [
+      "https://insights.dsij.in/dsijarticledetail/the-fo-effect-with-45-stocks-set-to-be-included-in-new-additions-drive-stock-prices-a-look-into-previous-inclusion-performances-id015"
+    ]
+  },
+  {
+    "id": "event_driven__buyback_tender_small_shareholder",
+    "name": "Tender-offer buyback through the small-shareholder quota",
+    "family": "event_driven",
+    "rule": "Event: tender buyback at price Pb. Estimate acceptance AR = min(1, 0.15*buyback_shares/small_holder_shares/participation). Enter if Pb/P0-1 >= 0.10 and AR*(Pb/P0-1) >= 0.03. Buy N = floor(min(0.6*capital, 190000)/P0) shares by record date minus 1 session, keeping N*record close <= 200000. Tender all. Sell returned shares at open after credit, or stop at P0-(AR/(1-AR))*(Pb-P0).",
+    "params": {
+      "min_premium": 0.1,
+      "min_expected_edge": 0.03,
+      "participation_assumed": 0.5,
+      "capital_fraction": 0.6,
+      "holding_cap_inr": 200000,
+      "reserved_fraction": 0.15
+    },
+    "instruments": "NSE cash equities plus broker tender window",
+    "holding_period": "3 to 10 weeks",
+    "data_needed": [
+      "daily_equity",
+      "events",
+      "fundamentals",
+      "other"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Cases: HCL Tech 2017 acceptance 148/220, about 10% in 3 months; TCS 2022 acceptance about 25% at 12-15% premium; L&T 2023 expected 25-30% at 8.5% premium; Infosys 2025 entitlement 2:11. Acceptance has fallen since 2016. Viable again after tax change of 1 Apr 2026.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "The Rs 2 lakh small-shareholder cap matches the account size; risks are low acceptance, post-buyback price drop on a concentrated position, tax-rule changes, and tendering that may not be automatable.",
+    "sources": [
+      "https://taxguru.in/sebi/sebi-reintroduces-open-market-buy-back-due-tax-neutrality-shareholders.html",
+      "https://www.scconline.com/blog/post/2026/07/16/finance-act-2026-share-buyback-taxation-analysis/",
+      "https://taxguru.in/income-tax/buyback-tax-reset-finance-act-2026-game-shareholders.html",
+      "https://primeinvestor.in/reports/the-share-buyback-game-isnt-worth-it/",
+      "https://premium.capitalmind.in/2023/09/larsen-and-toubro-buyback-analysis/",
+      "https://capitalmind.in/2017/07/bond-baba-unlocked-hcl-tech-accepts-23rd-of-buyback-a-10-return-in-3-months/",
+      "https://www.icicidirect.com/research/equity/finace/infosys-buyback-2025-complete-guide-for-shareholders",
+      "https://www.ipoji.com/buyback/infosys-buyback-2025",
+      "https://www.chittorgarh.com/report/latest-buyback-issues-in-india/80/tender-offer-buyback/"
+    ]
+  },
+  {
+    "id": "event_driven__buyback_announcement_drift",
+    "name": "Buyback announcement drift (no tendering)",
+    "family": "event_driven",
+    "rule": "Event: board intimation to consider buyback, or approval of a tender buyback with premium >= 10% and size >= 2% of equity. Buy next open. Sell at close two sessions before record date (or after 10 trading days if no record date yet). Max 3 positions.",
+    "params": {
+      "min_premium": 0.1,
+      "min_size_pct_equity": 2,
+      "exit_before_record_days": 2,
+      "fallback_hold_days": 10,
+      "max_positions": 3
+    },
+    "instruments": "NSE cash equities",
+    "holding_period": "1 to 6 weeks",
+    "data_needed": [
+      "daily_equity",
+      "events"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "India (IIMA working paper): significant positive abnormal returns around tender and open-market repurchase announcements; open-market repurchasers later underperform. 2006-2024 study: 5.9% pre-announcement run-up post-2015 attributed to leakage (unverified: snippet only).",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Simple long-only trade, but much of the move precedes the public announcement and the remaining drift is unquantified against 0.5% costs.",
+    "sources": [
+      "https://www.iima.ac.in/publication/market-overreaction-poor-long-run-performance-case-repurchase-firms-india"
+    ]
+  },
+  {
+    "id": "event_driven__open_offer_tender_arbitrage",
+    "name": "Open-offer (takeover) tender arbitrage",
+    "family": "event_driven",
+    "rule": "Event: open offer at price Po for X% of shares. Expected acceptance A = offer_shares / expected_tendered_public_shares. Enter if market price <= 0.95*Po and A >= 0.5. Tender all; sell leftovers at open after offer closes. Override: sell in market whenever price >= Po. Max 20% of capital.",
+    "params": {
+      "min_discount": 0.05,
+      "min_acceptance": 0.5,
+      "weight": 0.2
+    },
+    "instruments": "NSE/BSE cash equities plus tender window",
+    "holding_period": "2 to 4 months",
+    "data_needed": [
+      "daily_equity",
+      "events",
+      "other"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "India 2015-2017 (31 large offers): higher abnormal returns in days 0..+30 than before. India 2007-2010 (187 offers): negative post-announcement returns. Since 2013, 133 offers, only a handful fully subscribed; United Spirits acceptance 55% vs 70% expected.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Partial acceptance leaves unhedged leftover shares; the futures hedge professionals use is out of reach; tax treatment of tendered shares in 2026 unconfirmed.",
+    "sources": [
+      "https://rd.springer.com/chapter/10.1007/978-981-10-8926-8_14",
+      "https://ideas.repec.org/p/pra/mprapa/60432.html",
+      "https://www.business-standard.com/article/pf/why-open-offers-aren-t-attractive-for-many-investors-114101300002_1.html"
+    ]
+  },
+  {
+    "id": "event_driven__delisting_reverse_book_build",
+    "name": "Voluntary delisting: reverse book-building or fixed-price offer",
+    "family": "event_driven",
+    "rule": "Event: promoter delisting proposal. RBB mode: buy if price <= 1.15*floor; bid 1.4*floor in the book; if discovered price rejected and counter-offer fails, sell at market. Fixed-price mode: buy if price <= 0.96*fixed price and promoter plus committed holders can reach 90%. Stop 12% below entry. Max 20% of capital.",
+    "params": {
+      "max_premium_to_floor": 0.15,
+      "bid_multiple_of_floor": 1.4,
+      "fixed_price_min_spread": 0.04,
+      "stop_pct": 12,
+      "weight": 0.2
+    },
+    "instruments": "NSE/BSE cash equities plus tender window",
+    "holding_period": "2 to 6 months",
+    "data_needed": [
+      "daily_equity",
+      "events",
+      "other"
+    ],
+    "evidence": "anecdotal",
+    "india_evidence": true,
+    "reported_performance": "No systematic study found. Law-firm notes (2024-2025): RBB prices at times more than double the floor; success needs 90%; fixed price must be >= 15% above floor; counter-offer allowed at >= 75% post-offer holding with >= 50% of public float tendered.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Binary outcomes, a handful of illiquid events a year, cannot be backtested from prices; position must stay small.",
+    "sources": [
+      "https://www.azbpartners.com/bank/amendments-to-sebi-delisting-of-equity-shares-regulations-2021/",
+      "https://trilegal.com/knowledge-repository/trilegal-update-sebi-allows-delisting-through-a-fixed-price-offer/",
+      "https://www.business-standard.com/article/opinion/stepping-forward-with-delisting-reform-118091901151_1.html"
+    ]
+  },
+  {
+    "id": "event_driven__merger_swap_ratio_arbitrage",
+    "name": "Share-swap merger arbitrage, long target",
+    "family": "event_driven",
+    "rule": "Event: amalgamation scheme with swap ratio r (acquirer shares per target share). Spread = r*P_acquirer/P_target - 1. Buy target when spread >= 6% and record date expected within 6 months. Exit when spread < 1% or on record date. If both are in F&O and margin allows, short r units of acquirer futures. Max 25% of capital.",
+    "params": {
+      "entry_spread": 0.06,
+      "exit_spread": 0.01,
+      "max_months_to_record": 6,
+      "hedge": false,
+      "weight": 0.25
+    },
+    "instruments": "NSE cash equities; stock futures for hedge",
+    "holding_period": "1 to 18 months",
+    "data_needed": [
+      "daily_equity",
+      "daily_fo",
+      "events"
+    ],
+    "evidence": "anecdotal",
+    "india_evidence": true,
+    "reported_performance": "Examples only: Harita Seating/Minda Industries 2019 spread 8.13% gross, 6.92% after tax, unhedgeable; HDFC/HDFC Bank 2022-2023 spread 1-3% over about 15 months (unverified: snippet only).",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Without the acquirer short the position is just long the acquirer by proxy for months; the hedge needs a futures lot beyond this account.",
+    "sources": [
+      "https://premium.capitalmind.in/2019/02/the-uno-minda-and-harita-merger-is-there-an-arbitrage-opp/"
+    ]
+  },
+  {
+    "id": "event_driven__demerger_announcement_drift",
+    "name": "Demerger announcement drift",
+    "family": "event_driven",
+    "rule": "Event: board approves a demerger scheme. Buy parent at next open; sell at close after 5 trading days. Price>50, turnover>2 crore. Max 3 positions, equal weight. Variant: low-priced stocks only (below cross-sectional median price).",
+    "params": {
+      "hold_days": 5,
+      "min_price": 50,
+      "max_positions": 3,
+      "low_price_only": false
+    },
+    "instruments": "NSE/BSE cash equities",
+    "holding_period": "1 to 2 weeks",
+    "data_needed": [
+      "daily_equity",
+      "events"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "India 2003-2020 (221 BSE firms): +1.35% abnormal on day +1, 2.64% cumulative over days +1..+5; days -10..+10: 3.90% high-priced, 7.16% low-priced. India 2012-2014 (51 demergers): +1.74% on announcement.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Tradable, but 2.6% gross includes the opening gap and must cover 0.5% costs; a dozen or two events a year.",
+    "sources": [
+      "https://econpapers.repec.org/RePEc:taf:oaefxx:v:10:y:2022:i:1:p:2109277",
+      "https://indianjournals.com/article/jmpp1-7-1-002"
+    ]
+  },
+  {
+    "id": "event_driven__spinoff_post_listing",
+    "name": "Newly listed demerged entity",
+    "family": "event_driven",
+    "rule": "Event: demerged company lists. Wait for first session that does not close at the lower price band; buy next open. Hold 250 trading days; 25% stop. Skip if last reported annual profit is negative. Max 15% of capital per name.",
+    "params": {
+      "hold_days": 250,
+      "stop_pct": 25,
+      "weight": 0.15,
+      "require_profit": true
+    },
+    "instruments": "NSE/BSE cash equities",
+    "holding_period": "6 to 12 months",
+    "data_needed": [
+      "daily_equity",
+      "events",
+      "fundamentals"
+    ],
+    "evidence": "anecdotal",
+    "india_evidence": true,
+    "reported_performance": "No Indian sample study found. 2015 press review: about half of listed spin-offs gave negative returns with very wide dispersion (figures unverified: snippet only).",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Small long-only positions are possible; few events, no price history and high dispersion make it hard to validate.",
+    "sources": [
+      "https://www.outlookbusiness.com/markets-5/feature-20/looks-good-but-far-from-scrumptious-1908"
+    ]
+  },
+  {
+    "id": "event_driven__rights_entitlement_arbitrage",
+    "name": "Rights-entitlement discount arbitrage",
+    "family": "event_driven",
+    "rule": "During a rights issue: if P_share - (P_RE + issue_price) >= 0.03*P_share and share turnover > 2 crore, buy RE, apply for rights shares, sell shares at open on credit day. Abort if share price falls below issue_price*1.05 before application. Max 20% of capital.",
+    "params": {
+      "min_discount": 0.03,
+      "abort_buffer": 0.05,
+      "weight": 0.2
+    },
+    "instruments": "Rights entitlements, NSE cash equities, rights application",
+    "holding_period": "2 to 4 weeks",
+    "data_needed": [
+      "daily_equity",
+      "events",
+      "other"
+    ],
+    "evidence": "anecdotal",
+    "india_evidence": false,
+    "reported_performance": "No return study found. Process since 7 Apr 2025 completes in 23 working days. Rights/FPO issuers 2000-2014 lagged matched firms by 17% over 5 years.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Capital is enough, but RE liquidity is thin, there is no overnight hedge until allotment, and the application step is manual.",
+    "sources": [
+      "https://moneylife.in/article/rights-issues-sebi-reduces-timeline-to-23-working-days-from-average-of-317-days/76623.html",
+      "https://nsearchives.nseindia.com/research/content/res_WorkingPaper15.pdf"
+    ]
+  },
+  {
+    "id": "event_driven__equity_issuer_avoidance",
+    "name": "Equity-issuer avoidance: QIP, rights issue, FPO",
+    "family": "event_driven",
+    "rule": "Exclude a stock from all long universes for 126 trading days after a QIP opens and 250 trading days after a rights issue or FPO closes.",
+    "params": {
+      "qip_block_days": 126,
+      "rights_fpo_block_days": 250
+    },
+    "instruments": "Filter applied to other strategies",
+    "holding_period": "not applicable",
+    "data_needed": [
+      "events"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "84 QIPs 2010-2016: average 3- and 6-month holding returns negative every year and below BSE 500. 177 rights/FPO issuers 2000-2014: 17% below matched firms over 5 years.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "A filter with no capital requirement; needs an issuance calendar.",
+    "sources": [
+      "https://npbang.blogspot.com/2018/06",
+      "https://nsearchives.nseindia.com/research/content/res_WorkingPaper15.pdf",
+      "https://ideas.repec.org/a/sae/globus/v16y2015i5_supplp155s-174s.html"
+    ]
+  },
+  {
+    "id": "event_driven__ofs_retail_discount_capture",
+    "name": "OFS retail-discount capture",
+    "family": "event_driven",
+    "rule": "Event: exchange OFS with retail discount d. On retail day bid at cut-off for up to 30% of capital if (prev_close - floor*(1-d))/prev_close >= 0.04 and non-retail book >= 2x subscribed. Sell at open on the day shares are credited.",
+    "params": {
+      "min_effective_discount": 0.04,
+      "min_nonretail_subscription": 2,
+      "weight": 0.3
+    },
+    "instruments": "OFS bid then NSE cash sale",
+    "holding_period": "1 to 3 days",
+    "data_needed": [
+      "daily_equity",
+      "events",
+      "other"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "No return study found. 39 NSE OFS, Mar 2012-Jul 2023: significant price declines before PSU OFS announcements (floor-price leakage).",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Affordable, but the stock often falls toward the floor on OFS day, there is no hedge, and bidding is unlikely to be available by API.",
+    "sources": [
+      "https://ideas.repec.org/a/eme/rbfpps/rbf-07-2024-0208.html"
+    ]
+  },
+  {
+    "id": "event_driven__ipo_retail_application_filter",
+    "name": "Mainboard IPO retail application with subscription filter",
+    "family": "event_driven",
+    "rule": "Mainboard book-built IPOs only. On last day after 14:00 apply for one retail lot at cut-off if QIB subscription >= 20x and total >= 10x. Ignore grey-market premium unless negative (then skip). If allotted, sell at listing-day open, or hold with stop at issue price until close.",
+    "params": {
+      "min_qib_subscription": 20,
+      "min_total_subscription": 10,
+      "lots": 1,
+      "exit": "listing_open",
+      "gmp_veto_if_negative": true
+    },
+    "instruments": "IPO application (UPI/ASBA), then NSE cash sale",
+    "holding_period": "about one week blocked; under one day market exposure",
+    "data_needed": [
+      "events",
+      "other",
+      "daily_equity"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "SEBI study, 144 mainboard IPOs Apr 2021-Dec 2023: 75% listed positive, 26 gained over 50%. 2025 (108 IPOs): median listing gain 3.8% vs 15.2% in 2024; about 8% average in early 2026.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "One lot is about Rs 15,000 and several can overlap; allotment odds are roughly 1 over the retail subscription multiple, so expected rupee gain per application is small; application automation unconfirmed.",
+    "sources": [
+      "https://taxguru.in/sebi/sebi-report-54-percent-ipo-shares-sold-week.html",
+      "https://www.ipomarket.in/news/build-long-term-portfolio-only-ipos-2025-26-data-risks",
+      "https://www.plindia.com/news/gmp-misleading-investors-why-grey-market-premium-no-longer-predicts-ipo-listings-pl-capital/",
+      "https://upstox.com/news/market-news/ipo/groww-to-lenskart-here-s-how-misleading-grey-market-signals-confuse-investors/article-184620"
+    ]
+  },
+  {
+    "id": "event_driven__ipo_post_listing_buy",
+    "name": "Buying IPOs in the secondary market on or after listing day",
+    "family": "event_driven",
+    "rule": "Listing date = first bhavcopy appearance (exclude demerger listings). Variant A: buy listing-day close, hold 60 trading days. Variant B: after >= 15 sessions buy first close above highest close since listing; stop = lowest low of last 10 sessions; exit on close below 50-day SMA or after 120 days. Max 4 positions.",
+    "params": {
+      "variant": "A",
+      "hold_days_A": 60,
+      "min_sessions_B": 15,
+      "stop_lookback_B": 10,
+      "exit_sma_B": 50,
+      "max_hold_B": 120,
+      "max_positions": 4
+    },
+    "instruments": "NSE cash equities",
+    "holding_period": "1 to 12 months",
+    "data_needed": [
+      "daily_equity"
+    ],
+    "evidence": "negative",
+    "india_evidence": true,
+    "reported_performance": "2025: only 41% of 108 mainboard IPOs above listing price at year-end. 377 IPOs 2005-2015: 36-month abnormal return -57.33%, about 10% beat the index. 2012-2025 study: average +20.29% at 1 year fading to +8.72% at 3 years (secondary reports).",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Tradable with small positions; evidence for buy-and-hold from listing is negative and the breakout variant is untested.",
+    "sources": [
+      "https://www.ipomarket.in/news/build-long-term-portfolio-only-ipos-2025-26-data-risks",
+      "https://taxguru.in/sebi/sebi-report-54-percent-ipo-shares-sold-week.html"
+    ]
+  },
+  {
+    "id": "event_driven__anchor_lockin_expiry",
+    "name": "Anchor lock-in expiry",
+    "family": "event_driven",
+    "rule": "Unlock dates = allotment date + 30 and + 90 calendar days (allotment about 3 sessions before listing). Overlay: hold no recent IPO from 3 sessions before to 2 after the 30-day unlock. Contrarian: if first unlocked session closes down >= 5% on volume >= 3x 20-day average, buy that close, sell after 5 trading days.",
+    "params": {
+      "unlock_days": [
+        30,
+        90
+      ],
+      "avoid_window": [
+        -3,
+        2
+      ],
+      "drop_pct": 5,
+      "volume_mult": 3,
+      "hold_days": 5
+    },
+    "instruments": "NSE cash equities (recent listings)",
+    "holding_period": "1 to 5 days",
+    "data_needed": [
+      "daily_equity",
+      "events"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "SEBI staff study, 242 mainboard IPOs Apr 2022-Oct 2025: mean price impact in 30-day unlock window from about -0.4% (anchor exits <= 2.5%) to -3.5% (exits > 10%); 90-day window more muted; anchors exit 3.2% at T+30, 17.3% after T+90, 51% by T+365.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Overlay costs nothing; the contrarian leg is small, long-only and untested; no shorting possible in new listings.",
+    "sources": [
+      "https://taxguru.in/sebi/sebi-study-finds-gradual-anchor-investor-exit-mainboard-ipos.html"
+    ]
+  },
+  {
+    "id": "event_driven__bonus_split_announcement",
+    "name": "Bonus and stock-split announcements",
+    "family": "event_driven",
+    "rule": "Event: board approves bonus issue or forward split. Buy next open; sell at close after 10 trading days. Price>50, turnover>2 crore, max 3 positions. Variant: buy 5 sessions before ex-date, sell at ex-date close.",
+    "params": {
+      "hold_days": 10,
+      "min_price": 50,
+      "max_positions": 3,
+      "ex_date_variant": false,
+      "pre_ex_days": 5
+    },
+    "instruments": "NSE cash equities",
+    "holding_period": "1 to 30 days",
+    "data_needed": [
+      "daily_equity",
+      "events"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "India 2010-2015 (23 forward splits): +1.61% abnormal around announcement day (significant), +1.28% on split day (not significant). Other Indian studies: positive bonus announcement effect, mixed for splits (unverified: snippet only).",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "A 1-2% effect concentrated on the announcement day cannot be captured after the fact and is about the size of costs.",
+    "sources": [
+      "https://studentlive.iimcal.ac.in/sites/all/files/pdfs/wps_798.pdf"
+    ]
+  },
+  {
+    "id": "event_driven__fii_dii_flow_signal",
+    "name": "Daily FII/DII flow as next-day index signal",
+    "family": "event_driven",
+    "rule": "After close read provisional FII net cash-market figure. If FII net > 0 (variant: above its 20-day mean), hold Nifty ETF for the next session, else cash. Monthly variant: hold if prior month FII net > 0.",
+    "params": {
+      "signal": "fii_net_positive",
+      "lookback_mean_days": 20,
+      "instrument": "NIFTY_ETF"
+    },
+    "instruments": "Nifty ETF or index futures",
+    "holding_period": "1 day (variant 1 month)",
+    "data_needed": [
+      "daily_index",
+      "other"
+    ],
+    "evidence": "negative",
+    "india_evidence": true,
+    "reported_performance": "India, 4,402 trading days from 12 Nov 2007: next-day market up about 50% of the time whether FIIs bought or sold the day before; same-day 56%; monthly co-movement about 70% is contemporaneous; FIIs buy after up days 63% of the time.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Trivially tradable with an ETF, but the data show no lead from flows to returns and daily switching costs are pure drag.",
+    "sources": [
+      "https://digest.groww.in/p/what-if-the-story-we-tell-about-fiis"
+    ]
+  },
+  {
+    "id": "event_driven__upper_circuit_momentum",
+    "name": "Upper-circuit momentum",
+    "family": "event_driven",
+    "rule": "Universe NSE EQ series with 5/10/20% band, price>20, 20-day median turnover>1 crore; exclude 2% band, BE/T2T, SME, ASM/GSM. Signal: close >= prev close*(1+band) - tick, volume >= 2x 20-day average, 10-day gain <= 40%. Buy next open only if open < that day's upper band. Exit first close not at upper band, or close below prior low, or 5 sessions. 10% of capital each.",
+    "params": {
+      "bands": [
+        5,
+        10,
+        20
+      ],
+      "volume_mult": 2,
+      "max_10d_gain_pct": 40,
+      "max_hold_days": 5,
+      "weight": 0.1,
+      "min_turnover_cr": 1
+    },
+    "instruments": "NSE cash equities (small and micro cap)",
+    "holding_period": "1 to 5 days",
+    "data_needed": [
+      "daily_equity",
+      "other"
+    ],
+    "evidence": "anecdotal",
+    "india_evidence": false,
+    "reported_performance": "No study or credible backtest found (searched Nov 2026). Exchange mechanics: at upper circuit buyers queue with no sellers, so new buys may not fill.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Capital is sufficient, but winning trades tend not to fill and losing ones can lock at lower circuit; naive backtests overstate results.",
+    "sources": [
+      "https://onetradejournal.com/glossary/upper-circuit",
+      "https://nsearchives.nseindia.com/content/equities/sec_list.csv"
+    ]
+  }
+]

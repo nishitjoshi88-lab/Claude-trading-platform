@@ -1,0 +1,883 @@
+[
+  {
+    "id": "options_selling__intraday_short_straddle_leg_sl",
+    "name": "Intraday ATM short straddle with per-leg stop (9:20 straddle)",
+    "family": "intraday_short_straddle",
+    "rule": "Each trading day at entry_time sell 1 lot ATM call and 1 lot ATM put of the nearest Nifty weekly. Place a stop on each leg at entry premium x (1 + leg_sl_pct/100). A stopped leg closes alone; the other continues. If move_other_to_cost, after the first stop set the surviving leg's stop to its entry price. No re-entry. Square off everything at exit_time. Use stop-limit orders with a buffer (market orders are barred for API algos).",
+    "params": {
+      "entry_time": "09:20",
+      "exit_time": "15:10",
+      "leg_sl_pct": 25,
+      "leg_sl_pct_range": "20-50",
+      "entry_time_range": "09:16-11:00",
+      "move_other_to_cost": false,
+      "lots": 1
+    },
+    "instruments": "Nifty 50 weekly index options (NSE, Tuesday expiry, lot 65)",
+    "holding_period": "Intraday, about 6 hours",
+    "data_needed": [
+      "intraday"
+    ],
+    "evidence": "negative",
+    "india_evidence": true,
+    "reported_performance": "Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026: 25% stop gross +Rs 19,405 (246 trades, win 56%, PF 1.07, max DD Rs 33,575), after Rs 20/order and slippage -Rs 33,527. Stop-to-cost variant gross +Rs 57,025, net +Rs 8,009. Marketcalls, Bank Nifty weekly, 35% stop, 2017-2023: profitable to 2022, weak in 2023 (charts only).",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "Naked straddle margin about Rs 1.9-2.2 lakh per lot (about Rs 2.8 lakh on expiry day) exceeds the account; costs of about Rs 215 a day exceed the gross edge of Rs 79 a trade.",
+    "sources": [
+      "https://www.quantsapp.com/backtesting/strategies/short-straddle-entry-time-grid-leg-sl",
+      "https://www.quantsapp.com/backtesting/strategies/short-straddle-leg-sl-move-other-to-cost",
+      "https://www.marketcalls.in/futures-and-options/is-the-920-straddle-no-more-working.html",
+      "https://www.marketcalls.in/futures-and-options/how-the-9-20-intraday-straddlers-are-being-gamed.html",
+      "https://algotest.in/blog/the-920-straddle-strategy-defined.md",
+      "https://tradingqna.com/raw/179061",
+      "https://tradingqna.com/raw/88032"
+    ]
+  },
+  {
+    "id": "options_selling__intraday_straddle_trailing_leg_sl",
+    "name": "Intraday short straddle with trailing per-leg stops",
+    "family": "intraday_short_straddle",
+    "rule": "At entry_time sell 1 lot ATM call and ATM put, nearest Nifty weekly. Each leg starts with a stop leg_sl_pct above its entry. For every trail_x points the leg's premium has fallen below entry (measured at its lowest price so far), lower that leg's stop by trail_y points. A stopped leg closes alone. Close everything at exit_time. One trade a day, no re-entry.",
+    "params": {
+      "entry_time": "11:00",
+      "exit_time": "14:30",
+      "leg_sl_pct": 30,
+      "trail_x_points": 5,
+      "trail_y_points": 5,
+      "lots": 1
+    },
+    "instruments": "Nifty 50 weekly index options (NSE, Tuesday expiry, lot 65)",
+    "holding_period": "Intraday, about 3.5 hours",
+    "data_needed": [
+      "intraday"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026: gross +Rs 1,33,792 (246 trades, win 61%, PF 2.34, max DD Rs 7,004), after Rs 20/order and slippage +Rs 84,258. Stops filled exactly at trigger, which flatters trailing stops.",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "Naked straddle margin about Rs 2.1 lakh per lot. A winged (iron fly) version would fit off expiry day but is untested.",
+    "sources": [
+      "https://www.quantsapp.com/backtesting/strategies/straddle-per-leg-trailing-sl"
+    ]
+  },
+  {
+    "id": "options_selling__intraday_straddle_combined_sl_reentry",
+    "name": "Intraday straddle with combined-premium stop, target and re-entry",
+    "family": "intraday_short_straddle",
+    "rule": "At entry_time sell ATM call and put, nearest Nifty weekly. Exit both legs when call+put premium <= credit x (1 - target_pct/100) or >= credit x sl_multiplier. After either exit, sell a fresh ATM straddle one minute later, up to max_entries per day, none after no_entry_after. Close anything open at exit_time.",
+    "params": {
+      "entry_time": "09:20",
+      "exit_time": "15:15",
+      "target_pct": 20,
+      "sl_multiplier": 1.5,
+      "max_entries": 3,
+      "no_entry_after": "14:30",
+      "lots": 1
+    },
+    "instruments": "Nifty 50 weekly index options (NSE, Tuesday expiry, lot 65)",
+    "holding_period": "Intraday, minutes to hours",
+    "data_needed": [
+      "intraday"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026: gross +Rs 60,284 (365 trades, win 69%, PF 1.20, max DD Rs 40,329), net +Rs 23,961. Leg re-entry variant gross +Rs 51,316, net -Rs 17,786. Midday re-entry variant gross +Rs 7,763, net -Rs 54,413.",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "Naked straddle margin exceeds Rs 1.5 lakh; re-entries multiply the Rs 20 per order cost.",
+    "sources": [
+      "https://www.quantsapp.com/backtesting/strategies/short-straddle-combined-premium-sl-target-reentry",
+      "https://www.quantsapp.com/backtesting/strategies/short-straddle-leg-sl-reentry-modes",
+      "https://www.quantsapp.com/backtesting/strategies/straddle-leg-sl-midday-reentry-if-both-stopped"
+    ]
+  },
+  {
+    "id": "options_selling__staggered_multi_entry_straddle",
+    "name": "Staggered multi-entry intraday straddles",
+    "family": "intraday_short_straddle",
+    "rule": "At each time in entry_times sell one ATM call and one ATM put of the nearest Nifty weekly, using the ATM strike at that moment (each is an independent tranche). Each leg of each tranche has its own stop at leg_sl_pct above its sale price. No re-entry. Close all tranches at exit_time.",
+    "params": {
+      "entry_times": [
+        "09:40",
+        "09:50",
+        "10:10",
+        "10:30"
+      ],
+      "exit_time": "15:15",
+      "leg_sl_pct": 30,
+      "lots_per_tranche": 1
+    },
+    "instruments": "Nifty 50 weekly index options (NSE, Tuesday expiry, lot 65)",
+    "holding_period": "Intraday",
+    "data_needed": [
+      "intraday"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026 (4 lots a day): gross +Rs 3,05,560 (984 trades, win 64%, PF 1.35, max DD Rs 78,433), net +Rs 1,02,470 with max DD Rs 1,31,629. Two months supplied two thirds of the profit.",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "Four naked straddles need about Rs 8.5 lakh margin.",
+    "sources": [
+      "https://www.quantsapp.com/backtesting/strategies/staggered-multi-entry-atm-straddle"
+    ]
+  },
+  {
+    "id": "options_selling__intraday_short_strangle_leg_sl",
+    "name": "Intraday OTM short strangle with per-leg stops",
+    "family": "intraday_short_strangle",
+    "rule": "At entry_time sell one OTM call and one OTM put of the nearest Nifty weekly, chosen by strike_rule: ATM +/- offset_points, or target_delta, or cheapest premium >= min_premium, or premium nearest premium_ratio x ATM premium. Stop each leg at leg_sl_pct above entry. Optional position MTM stop and target in rupees per lot. Close everything at exit_time. One strangle a day.",
+    "params": {
+      "entry_time": "09:20",
+      "exit_time": "15:15",
+      "strike_rule": "offset",
+      "offset_points": 50,
+      "target_delta": 0.15,
+      "min_premium": 55,
+      "premium_ratio": 0.4,
+      "leg_sl_pct": 25,
+      "mtm_sl_per_lot": 2000,
+      "mtm_target_per_lot": 1500
+    },
+    "instruments": "Nifty 50 weekly index options (NSE, Tuesday expiry, lot 65)",
+    "holding_period": "Intraday",
+    "data_needed": [
+      "intraday"
+    ],
+    "evidence": "negative",
+    "india_evidence": true,
+    "reported_performance": "Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026: ATM+/-50 gross +Rs 20,177, net -Rs 24,538. 0.15-delta gross +Rs 18,003, net -Rs 10,321. Premium >= Rs 55 gross +Rs 13,171, net -Rs 14,295. 40%-of-ATM premium at 10:00 gross +Rs 28,821, net -Rs 2,257.",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "Naked short strangle margin about Rs 2 lakh (about Rs 1.4-1.5 lakh or more per lot even for far strikes on expiry day); every variant lost money after costs.",
+    "sources": [
+      "https://www.quantsapp.com/backtesting/strategies/otm-points-offset-strangle-leg-sl",
+      "https://www.quantsapp.com/backtesting/strategies/delta-target-short-strangle-leg-and-mtm-sl",
+      "https://www.quantsapp.com/backtesting/strategies/premium-target-strangle-closest-premium",
+      "https://www.quantsapp.com/backtesting/strategies/short-strangle-40pct-atm-premium-strikes-175x-leg-sl",
+      "https://algotest.in/blog/how-to-backtest-options-trading-strategies-with-examples.md"
+    ]
+  },
+  {
+    "id": "options_selling__intraday_iron_fly",
+    "name": "Intraday iron fly with straddle-width wings",
+    "family": "intraday_defined_risk",
+    "rule": "At entry_time read S = ATM call + ATM put premium of the nearest Nifty weekly. Sell ATM call and put; buy the call nearest ATM + wing_mult x S and the put nearest ATM - wing_mult x S. Stop each short leg at leg_sl_pct above its sale price (buy back only that leg; wings stay). Close all legs at exit_time. One trade a day.",
+    "params": {
+      "entry_time": "09:35",
+      "exit_time": "15:15",
+      "wing_mult": 1.0,
+      "short_mult": 0.0,
+      "leg_sl_pct": 30,
+      "lots": 1
+    },
+    "instruments": "Nifty 50 weekly index options (NSE, Tuesday expiry, lot 65)",
+    "holding_period": "Intraday",
+    "data_needed": [
+      "intraday"
+    ],
+    "evidence": "negative",
+    "india_evidence": true,
+    "reported_performance": "Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026: gross +Rs 22,534 (246 trades, win 54%, PF 1.08, max DD Rs 38,836, worst -Rs 10,391), after Rs 20/order and slippage -Rs 43,012 (8 orders a day).",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Margin about Rs 80,000-90,000 on normal days but about Rs 1.5 lakh on expiry Tuesday (extra 2% ELM per short leg); costs of about Rs 266 a day are three times the gross edge at 1 lot.",
+    "sources": [
+      "https://www.quantsapp.com/backtesting/strategies/intraday-iron-condor-straddle-width-wings",
+      "https://tradingqna.com/raw/179061",
+      "https://support.zerodha.com/category/trading-and-markets/margins/margin-leverage-and-product-and-order-types/articles/additional-elm-for-index-expiry"
+    ]
+  },
+  {
+    "id": "options_selling__rolling_atm_straddle_delta_adjust",
+    "name": "Intraday delta-neutral adjustment: rolling ATM straddle / delta-band strangle",
+    "family": "delta_neutral_adjustment",
+    "rule": "At entry_time sell ATM call and put (nearest weekly); store the index level as reference. Whenever the index is roll_trigger_pct or more from the reference, buy back both legs, sell a new ATM straddle and reset the reference. On the trigger for straddle number max_straddles+1, close and stay flat. Close at exit_time. Variant: sell 0.30-delta strangle and re-centre the profitable leg when net delta leaves a band.",
+    "params": {
+      "entry_time": "10:00",
+      "exit_time": "15:15",
+      "roll_trigger_pct": 0.4,
+      "max_straddles": 3,
+      "variant_short_delta": 0.3,
+      "variant_mtm_sl_pct_of_credit": 30,
+      "variant_target_pct_of_credit": 60
+    },
+    "instruments": "Nifty 50 weekly index options (NSE, Tuesday expiry, lot 65)",
+    "holding_period": "Intraday",
+    "data_needed": [
+      "intraday"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026: rolling straddle gross +Rs 69,322 (487 straddles, win 52%, PF 1.26), net +Rs 15,534, max DD Rs 29,613. Delta-band 0.30-delta strangle gross +Rs 5,434, net -Rs 48,107.",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "Naked short options; each adjustment adds four orders and locks in the move's loss.",
+    "sources": [
+      "https://www.quantsapp.com/backtesting/strategies/rolling-atm-straddle-spot-move-roll",
+      "https://www.quantsapp.com/backtesting/strategies/delta-neutral-30d-strangle-net-delta-rebalance"
+    ]
+  },
+  {
+    "id": "options_selling__signal_timed_intraday_straddle",
+    "name": "Signal-timed intraday straddle (premium below VWAP, calmer-than-priced, skew filter)",
+    "family": "intraday_short_straddle",
+    "rule": "On bar_minutes bars from 09:20 to last_entry: compute the combined ATM straddle premium and its intraday VWAP. When the bar closes below VWAP, sell that ATM call and put. Exit when a later bar closes above VWAP. Stop each leg at leg_sl_pct above entry; after one stop move the other to cost. Maximum max_trades a day. Close at exit_time. Alternative gates: forecast 1-hour move / straddle-priced move < 0.9; ATM call/put premium difference <= 10%.",
+    "params": {
+      "bar_minutes": 5,
+      "last_entry": "15:00",
+      "exit_time": "15:15",
+      "leg_sl_pct": 50,
+      "max_trades": 3,
+      "forecast_priced_ratio_entry": 0.9,
+      "skew_max_pct": 10
+    },
+    "instruments": "Nifty 50 weekly index options (NSE, Tuesday expiry, lot 65)",
+    "holding_period": "Intraday, minutes to hours",
+    "data_needed": [
+      "intraday"
+    ],
+    "evidence": "negative",
+    "india_evidence": true,
+    "reported_performance": "Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026: VWAP cross gross +Rs 69,397 (644 trades, win 36%), net -Rs 11,074. Calmer-than-priced gross +Rs 50,218, net -Rs 98. Skew filter gross +Rs 20,054, net -Rs 16,149. Wait-and-trade gross +Rs 6,562, net -Rs 32,710. VIX-routed gross -Rs 20,635.",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "Naked straddle margin exceeds the account; no timing filter was net-positive.",
+    "sources": [
+      "https://www.quantsapp.com/backtesting/strategies/straddle-premium-vwap-cross-sell",
+      "https://www.quantsapp.com/backtesting/strategies/straddle-expected-move-vs-priced-move-filter",
+      "https://www.quantsapp.com/backtesting/strategies/atm-straddle-skew-filter-decaying-threshold",
+      "https://www.quantsapp.com/backtesting/strategies/wait-and-trade-momentum-short-straddle",
+      "https://www.quantsapp.com/backtesting/strategies/vix-regime-routed-straddle-entry-time-points-sl"
+    ]
+  },
+  {
+    "id": "options_selling__afternoon_short_straddle",
+    "name": "Afternoon (late-session) short straddle",
+    "family": "intraday_short_straddle",
+    "rule": "Each trading day, entry_min_before_close minutes before the session close, sell ATM call and put of the nearest Nifty weekly. Stop each leg at leg_sl_pct above its sale price. Close everything exit_min_before_close minutes before the close. No re-entry. Read the close time from the exchange calendar (it changes on 7 Dec 2026).",
+    "params": {
+      "entry_min_before_close": 150,
+      "exit_min_before_close": 30,
+      "leg_sl_pct": 30,
+      "lots": 1
+    },
+    "instruments": "Nifty 50 weekly index options (NSE, Tuesday expiry, lot 65)",
+    "holding_period": "Intraday, 2 hours",
+    "data_needed": [
+      "intraday"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026: gross +Rs 38,378 (246 trades, win 66%, PF 1.35, max DD Rs 30,957), after Rs 20/order and slippage +Rs 264.",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "Naked straddle margin exceeds the account; edge is zero after costs.",
+    "sources": [
+      "https://www.quantsapp.com/backtesting/strategies/afternoon-late-session-short-straddle-strangle"
+    ]
+  },
+  {
+    "id": "options_selling__expiry_day_open_to_close_straddle",
+    "name": "Expiry-day (0DTE) ATM straddle sold at the open and held to settlement",
+    "family": "expiry_day_0dte",
+    "rule": "On each Nifty weekly expiry day, at the open sell the call and put at the strike nearest the 09:15 index open, expiring today. Hold the fixed strike to settlement with no stop. P&L per unit = premium collected - abs(settlement - strike). Optional: buy wings wing_points away to cap loss (iron fly). Close before settlement if a leg is in the money to avoid exercise STT.",
+    "params": {
+      "entry_time": "09:15",
+      "wing_points": 0,
+      "stop": "none",
+      "lots": 1
+    },
+    "instruments": "Nifty 50 weekly options on expiry day (Tuesday); Sensex weekly (Thursday) as second venue",
+    "holding_period": "Intraday, one session",
+    "data_needed": [
+      "daily_fo",
+      "daily_index",
+      "intraday"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Quintalmind, 148 Nifty weekly expiries Jul 2023-May 2026, gross: mean +27 points per expiry on average premium 144 (19% kept), win 69%, avg win +80, avg loss -91, worst -290 points. US 0DTE (Vilkov, Sep 2016-Jan 2024): premium exists, mean returns not statistically significant.",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "Naked straddle on expiry day needs about Rs 2.8 lakh; the iron fly form needs about Rs 1.45-1.55 lakh, the whole account with no buffer.",
+    "sources": [
+      "https://www.quintalmind.com/blog/nifty-expiry-day-deep-dive",
+      "https://hulltactical.com/2026/07/08/0dte-options-tiny-edge-huge-distribution/"
+    ]
+  },
+  {
+    "id": "options_selling__expiry_day_hedged_stacking_straddle",
+    "name": "Expiry-day hedged stacking straddle with VIX-sized steps",
+    "family": "expiry_day_0dte",
+    "rule": "Expiry day only. At entry_time sell ATM call and put expiring today and buy call and put hedge_distance points away. Each time ATM moves one step (step_low_vix points if yesterday's India VIX close < vix_threshold, else step_high_vix), sell another hedged ATM straddle. Stop each short leg at sl_multiple x its sale price; re-sell a stopped leg once if it returns to its first sale price and exceeds Rs 5. At exit_time close all except shorts worth <= Rs 5.",
+    "params": {
+      "entry_time": "09:30",
+      "exit_time": "15:17",
+      "hedge_distance": 500,
+      "step_low_vix": 50,
+      "step_high_vix": 100,
+      "vix_threshold": "not stated in source",
+      "sl_multiple": 2.25
+    },
+    "instruments": "Nifty 50 weekly options on expiry day",
+    "holding_period": "Intraday, expiry day only",
+    "data_needed": [
+      "intraday",
+      "daily_index"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026: gross +Rs 1,70,091 (52 expiry days, win 69%, PF 3.04, max DD Rs 14,568), net +Rs 1,17,681. Last-traded-price fills on expiry-day options flatter the result.",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "Each stacked unit adds two short legs carrying 4% exposure plus 4% expiry-day ELM of notional (about Rs 1.3 lakh); several units need Rs 4 lakh or more.",
+    "sources": [
+      "https://www.quantsapp.com/backtesting/strategies/expiry-day-hedged-straddle-atm-roll-vix-step"
+    ]
+  },
+  {
+    "id": "options_selling__expiry_day_morning_range_condor",
+    "name": "Expiry-day opening-range iron condor",
+    "family": "expiry_day_0dte",
+    "rule": "Expiry day only, at 09:45. Trade only if the day opened inside the previous session's high-low range and the weekly put/call OI ratio is between pcr_min and pcr_max. Range = high and low of the first range_minutes. Sell call at (range high rounded to strike step) + buffer_pts and buy call wing_pts above; sell put at (range low rounded) - buffer_pts and buy put wing_pts below. Exit at tp_pct of credit captured or at exit_time. No stop.",
+    "params": {
+      "range_minutes": 30,
+      "buffer_pts": 50,
+      "wing_pts": 100,
+      "tp_pct": 60,
+      "exit_time": "14:30",
+      "pcr_min": "neutral band, not stated",
+      "pcr_max": "neutral band, not stated"
+    },
+    "instruments": "Nifty 50 weekly options on expiry day",
+    "holding_period": "Intraday, under 5 hours",
+    "data_needed": [
+      "intraday",
+      "daily_fo"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026: gross +Rs 14,308 (25 trades, win 80%, PF 3.4, worst -Rs 2,554), after Rs 20/order and slippage +Rs 10,037.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Defined risk and small worst loss, but two short legs on expiry day carry about 8% of notional in exposure plus ELM: about Rs 1.35-1.45 lakh, nearly the whole account, for about Rs 10,000 a year on a 25-trade sample.",
+    "sources": [
+      "https://www.quantsapp.com/backtesting/strategies/expiry-day-morning-range-iron-condor",
+      "https://support.zerodha.com/category/trading-and-markets/margins/margin-leverage-and-product-and-order-types/articles/additional-elm-for-index-expiry"
+    ]
+  },
+  {
+    "id": "options_selling__expiry_day_far_otm_penny_selling",
+    "name": "Expiry-day far-OTM penny option selling",
+    "family": "expiry_day_0dte",
+    "rule": "Expiry day only. Version A: at 09:30 sell the OTM call and the OTM put priced closest to target_premium rupees; stop each leg at sl_multiple x sale price; hold to the session's last print. Version B: minutes_before_close before the close sell the first call >= forward x (1 + band_pct/100) and first put <= forward x (1 - band_pct/100); same stop; hold to close.",
+    "params": {
+      "target_premium": 1.0,
+      "sl_multiple": 2.0,
+      "minutes_before_close": 30,
+      "band_pct": 1.0,
+      "lots": 1
+    },
+    "instruments": "Nifty 50 weekly options on expiry day",
+    "holding_period": "Intraday, expiry day only",
+    "data_needed": [
+      "intraday"
+    ],
+    "evidence": "negative",
+    "india_evidence": true,
+    "reported_performance": "Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026: Rs 1 selling gross +Rs 6,299 (52 trades, win 96%), net +Rs 1,563. Last-30-minute 1% OTM gross +Rs 2,143, net -Rs 2,604 with only 10% of trades profitable after costs.",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "Naked shorts on expiry day need full margin plus ELM for a few hundred rupees; costs exceed the premium.",
+    "sources": [
+      "https://www.quantsapp.com/backtesting/strategies/expiry-day-sell-rs1-far-otm-sl-2x",
+      "https://www.quantsapp.com/backtesting/strategies/expiry-day-last-30min-otm-sell-1pct-band"
+    ]
+  },
+  {
+    "id": "options_selling__pre_expiry_oi_wall_strangle",
+    "name": "Pre-expiry overnight strangle beyond open-interest walls",
+    "family": "weekly_short_strangle",
+    "rule": "At entry_time on the session before the Nifty weekly expiry: resistance = call strike with the highest open interest, support = put strike with the highest open interest (that expiry). Sell the call at resistance and the put support_steps strikes below support. Skip unless the call is above and the put below the forward. Close both when buy-back cost >= sl_mult x credit; otherwise hold to the expiry close. Small-account form: add wings wing_points beyond each short.",
+    "params": {
+      "entry_time": "15:00",
+      "support_steps": 1,
+      "sl_mult": 2.0,
+      "wing_points": 0,
+      "lots": 1
+    },
+    "instruments": "Nifty 50 weekly index options (NSE, Tuesday expiry, lot 65)",
+    "holding_period": "1 trading day (overnight into expiry)",
+    "data_needed": [
+      "daily_fo",
+      "intraday"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026: gross +Rs 51,956 (45 trades, win 73%, PF 1.75, max DD Rs 30,277, worst -Rs 18,232), net +Rs 46,436. Regime variant gross +Rs 35,348 with one -Rs 60,993 trade.",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "Naked and held through expiry day (about Rs 2.8 lakh). The winged form would need about Rs 85,000 overnight and about Rs 1.5 lakh on expiry day and is untested.",
+    "sources": [
+      "https://www.quantsapp.com/backtesting/strategies/pre-expiry-strangle-beyond-support-resistance-2x-sl",
+      "https://www.quantsapp.com/backtesting/strategies/pre-expiry-regime-straddle-or-skewed-strangle"
+    ]
+  },
+  {
+    "id": "options_selling__weekly_iron_condor",
+    "name": "Weekly Nifty iron condor (SD-based or percent-OTM strikes, credit-multiple stop)",
+    "family": "weekly_defined_risk",
+    "rule": "At 15:25, entry_dte trading days before weekly expiry: F = parity forward, IV = mean ATM IV, d = sd_mult x IV x sqrt(entry_dte/252). Sell put at F x exp(-d) rounded down, call at F x exp(d) rounded up; buy wings wing_pct of F beyond. Daily at 15:25 before expiry day close if cost-to-close >= stop_mult x credit; else hold to expiry. Variant: shorts 2% OTM, 150-point wings, exit at 50% of credit or loss of 1.5 x credit.",
+    "params": {
+      "entry_dte": 3,
+      "sd_mult": 1.5,
+      "wing_pct": 2.0,
+      "stop_mult": 3.0,
+      "variant_otm_pct": 2.0,
+      "variant_wing_pts": 150,
+      "variant_tp_pct": 50,
+      "variant_sl_mult": 1.5,
+      "lots": 1
+    },
+    "instruments": "Nifty 50 weekly index options (NSE, Tuesday expiry, lot 65)",
+    "holding_period": "2 to 5 trading days",
+    "data_needed": [
+      "daily_fo",
+      "daily_index"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026: 1.5 SD gross +Rs 21,695 (50 trades, win 86%, PF 1.46, worst week -Rs 22,379), net +Rs 12,836. 2% OTM gross +Rs 26,215 (win 85%, PF 2.28, max DD Rs 6,669), net +Rs 14,223. Max-pain centred net +Rs 18,150. Naive 2-DTE ATM+/-3 strikes gross -Rs 19,152.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "One lot only: about Rs 80,000-90,000 margin until the day before expiry, about Rs 1.45-1.55 lakh if held on expiry Tuesday. Costs about Rs 12,000 a year. Net of roughly 8-12% a year on the account in a one-year in-sample test, with a possible -15% week.",
+    "sources": [
+      "https://www.quantsapp.com/backtesting/strategies/nifty-weekly-iron-condor-1p5sd-3dte-3x-stop",
+      "https://www.quantsapp.com/backtesting/strategies/weekly-iron-condor-pct-otm-tp-sl-credit-multiple",
+      "https://www.quantsapp.com/backtesting/strategies/max-pain-centred-weekly-iron-condor",
+      "https://www.quantsapp.com/backtesting/strategies/time-based-weekly-iron-condor-2dte-1500-to-expiry-1515",
+      "https://support.zerodha.com/category/trading-and-markets/margins/margin-leverage-and-product-and-order-types/articles/additional-elm-for-index-expiry"
+    ]
+  },
+  {
+    "id": "options_selling__weekly_condor_roll_untested_side",
+    "name": "Weekly iron condor with roll-untested-side adjustment",
+    "family": "delta_neutral_adjustment",
+    "rule": "At 09:20 on the first day of each weekly cycle (>= min_dte days left) sell short_delta call and put, buy wings wing_pts beyond. Each minute: if a short trades at >= trigger x its reference premium, close the other short and wing and re-sell that side at the strike with premium closest to the tested short's, never past its strike, with a new wing. Once an iron fly, exit if the index goes breach_strikes beyond; else exit 15:15 expiry day.",
+    "params": {
+      "short_delta": 0.16,
+      "wing_pts": 200,
+      "trigger": 2.0,
+      "min_dte": 3,
+      "breach_strikes": 1,
+      "max_adjustments": "until iron fly",
+      "lots": 1
+    },
+    "instruments": "Nifty 50 weekly index options (NSE, Tuesday expiry, lot 65)",
+    "holding_period": "3 to 5 trading days",
+    "data_needed": [
+      "intraday",
+      "daily_fo"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026: gross +Rs 32,045 (53 trades, win 55%, PF 1.42, max DD Rs 26,433, worst -Rs 6,438), after Rs 20/order and slippage +Rs 12,668.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Same margin as a 1-lot condor (about Rs 85,000; about Rs 1.5 lakh on expiry day); each roll is four more orders; needs minute-level monitoring.",
+    "sources": [
+      "https://www.quantsapp.com/backtesting/strategies/iron-condor-roll-untested-at-2x-then-iron-fly"
+    ]
+  },
+  {
+    "id": "options_selling__weekly_short_strangle",
+    "name": "Weekly naked short strangle (ATR-distance or deep OTM with shift)",
+    "family": "weekly_short_strangle",
+    "rule": "At 11:15 on the first session after the previous weekly expiry sell the call at ATM + atr_mult x weekly ATR and the put at ATM - atr_mult x weekly ATR (Wilder ATR over completed weekly bars of the near future; round outward; not inside floor_delta). Close both when the strangle costs stop_mult x credit (stop_mult_high_vix if India VIX > 18). Otherwise hold to expiry. Variant: sell 0.10-delta legs, combined stop 1.8 x credit, re-sell after a stop.",
+    "params": {
+      "atr_mult": 1.25,
+      "atr_weeks": "not stated",
+      "floor_delta": 0.05,
+      "stop_mult": 2.5,
+      "stop_mult_high_vix": 3.0,
+      "variant_delta": 0.1,
+      "variant_stop_mult": 1.8
+    },
+    "instruments": "Nifty 50 weekly index options (NSE, Tuesday expiry, lot 65)",
+    "holding_period": "About 5 trading days",
+    "data_needed": [
+      "daily_fo",
+      "daily_index"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026: ATR strangle gross +Rs 31,608 (51 trades, win 82%, PF 3.0, max DD Rs 3,507), net +Rs 27,013. Deep-OTM 0.10-delta with shift gross -Rs 1,680, net -Rs 8,995, worst trade -Rs 43,218.",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "Naked strangle margin about Rs 2.1 lakh and more on expiry day.",
+    "sources": [
+      "https://www.quantsapp.com/backtesting/strategies/weekly-atr-multiple-short-strangle-premium-multiple-sl",
+      "https://www.quantsapp.com/backtesting/strategies/weekly-deep-otm-01delta-strangle-combined-sl-shift-out",
+      "https://www.multibagg.ai/market-pulse/articles/bank-nifty-short-strangle-backtests-cmob7yw87rvgsph0j6sq82xl0"
+    ]
+  },
+  {
+    "id": "options_selling__monthly_45dte_straddle_strangle",
+    "name": "Monthly 45-DTE short straddle/strangle managed at 21 DTE with India VIX percentile filter",
+    "family": "monthly_premium_selling",
+    "rule": "For each Nifty monthly expiry, entry_dte calendar days before it at 15:15, if India VIX percentile rank over the prior 252 sessions >= vix_pctile_min, sell 1 lot ATM call and put (or short_delta strangle). Exit at the first of: combined premium <= 50% of credit; combined premium >= 200% of credit; exit_dte calendar days before expiry. Check target and stop only at hourly marks.",
+    "params": {
+      "entry_dte": 45,
+      "exit_dte": 21,
+      "target_pct_of_credit": 50,
+      "stop_pct_of_credit": 200,
+      "vix_pctile_min": 75,
+      "short_delta": "ATM (alternatives 0.30, 0.16)",
+      "lots": 1
+    },
+    "instruments": "Nifty 50 monthly index options (NSE, last-Tuesday expiry, lot 65)",
+    "holding_period": "Up to 24 calendar days",
+    "data_needed": [
+      "daily_fo",
+      "daily_index"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Zerodha In The Money, Nifty Jan 2019-Jun 2026, net of charges: straddle win about 70%, 5 of 7 years positive, worst trade over 1,000 points (Feb 2026 cycle); with VIX above 75th percentile win about 86%, no stops, about 20 trades. Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026: straddle gross -Rs 29,776 (max DD Rs 1,14,865); 16-delta strangle gross +Rs 8,298; 45-DTE condor gross -Rs 5,318.",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "Margin about Rs 3 lakh for one straddle lot; Zerodha's own sizing says about Rs 11 lakh of capital per lot. The condor form fits on margin but lost money in 2025-26.",
+    "sources": [
+      "https://inthemoneybyzerodha.substack.com/p/we-backtested-the-famous-45-dte-strategy",
+      "https://www.quantsapp.com/backtesting/strategies/monthly-short-straddle-45dte-50pt-21dte",
+      "https://www.quantsapp.com/backtesting/strategies/monthly-short-strangle-16d-45dte-manage-21dte-50pct",
+      "https://www.quantsapp.com/backtesting/strategies/monthly-iron-condor-45dte-30d-short-16d-wings-exit-15dte"
+    ]
+  },
+  {
+    "id": "options_selling__monthly_vix_implied_move_strangle_condor",
+    "name": "Monthly strangle/condor at the India-VIX-implied one-sigma move",
+    "family": "monthly_premium_selling",
+    "rule": "At 15:15 on the first session with <= entry_cal_dte (and >= min_dte) calendar days to Nifty monthly expiry: move = spot x VIX_prev_close/100 x sqrt(days_left/365) x sd_mult. Sell the first call strike >= future + move and the first put strike <= future - move. For the condor buy wings wing_pts beyond each short. Hold to 15:15 on expiry day (or the day before to avoid expiry margin). No stop by default.",
+    "params": {
+      "entry_cal_dte": 15,
+      "min_dte": 3,
+      "sd_mult": 1.0,
+      "wing_pts": 300,
+      "stop_mult": 0,
+      "lots": 1
+    },
+    "instruments": "Nifty 50 monthly index options (NSE, last-Tuesday expiry, lot 65)",
+    "holding_period": "3 to 15 calendar days (variant: full month)",
+    "data_needed": [
+      "daily_fo",
+      "daily_index"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026: naked strangle entered <= 15 days out gross +Rs 74,419 (12 trades, 11 wins, worst -Rs 371). Condor entered on day 1 of the series with VIX/sqrt(12) bounds and 300-point wings gross -Rs 35,641 (13 trades, win 69%, average loss 4.8 x average win).",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Naked strangle does not fit (about Rs 2.1 lakh). The condor fits (about Rs 85,000 off expiry day) but the only condor test lost money; 12-13 trades prove nothing.",
+    "sources": [
+      "https://www.quantsapp.com/backtesting/strategies/monthly-short-strangle-vix-implied-move-strikes",
+      "https://www.quantsapp.com/backtesting/strategies/monthly-iron-condor-vix-sqrt12-bounds"
+    ]
+  },
+  {
+    "id": "options_selling__vrp_gated_premium_selling",
+    "name": "VRP-gated premium selling (IV minus realised gap, IV/VIX percentile)",
+    "family": "volatility_risk_premium",
+    "rule": "Daily at 15:15: gap = ATM IV of nearest Nifty monthly with >= 5 days left minus rv_window-day close-to-close realised vol of the future (annualised, vol points). If flat and gap >= gap_pts, sell ATM call and put and buy wing_delta wings. Close when the structure costs sl_mult x net credit, when gap <= 0, after max_days trading days, or exit_days_before expiry. Alternative gate: IV percentile >= 80 then sell 0.16-delta strangle, target 50%, stop 2 x credit.",
+    "params": {
+      "rv_window": 21,
+      "gap_pts": 5,
+      "wing_delta": 0.1,
+      "sl_mult": 1.5,
+      "max_days": 10,
+      "exit_days_before": 2,
+      "ivp_threshold": 80,
+      "ivp_lookback_days": 252
+    },
+    "instruments": "Nifty 50 monthly index options (NSE, last-Tuesday expiry, lot 65)",
+    "holding_period": "Up to 10 trading days",
+    "data_needed": [
+      "daily_fo",
+      "daily_index"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026: IV-RV gap with wings gross +Rs 47,942 (12 trades, win 58%, PF 1.81, worst -Rs 19,152), net +Rs 45,472, mostly one month. IV-percentile strangle gross +Rs 22,497 (14 trades, win 86%, worst -Rs 28,291). OpenAlgo, year to Jun 2026: India VIX averaged 1.93 points above realised, positive 82% of days.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "With wings about Rs 80,000-90,000 margin for one lot and exits before expiry day; few trades keep costs low; samples are tiny and implied can be high for good reason (March 2026).",
+    "sources": [
+      "https://www.quantsapp.com/backtesting/strategies/vrp-atm-iv-minus-realised-vol-gap",
+      "https://www.quantsapp.com/backtesting/strategies/ivp-ivr-gated-short-strangle",
+      "https://www.quantsapp.com/backtesting/strategies/put-skew-extreme-sell-rich-side",
+      "https://www.openalgo.in/quant/vix-and-vrp",
+      "https://econpapers.repec.org/RePEc:eee:reveco:v:70:y:2020:i:c:p:321-334",
+      "https://inthemoneybyzerodha.substack.com/p/we-backtested-the-famous-45-dte-strategy"
+    ]
+  },
+  {
+    "id": "options_selling__overnight_short_straddle",
+    "name": "Overnight (close-to-open) short straddle",
+    "family": "volatility_risk_premium",
+    "rule": "Every trading day, entry_min_before_close minutes before the close, sell ATM call and put of the nearest Nifty weekly that does not expire today (if skip_into_expiry, skip when it expires next session). Buy both back at exit_time next session. No stop, no target. Defined-risk form: buy wings wing_strikes beyond each short at entry.",
+    "params": {
+      "entry_min_before_close": 5,
+      "exit_time": "09:20",
+      "skip_into_expiry": true,
+      "wing_strikes": 0,
+      "lots": 1
+    },
+    "instruments": "Nifty 50 weekly index options (NSE, Tuesday expiry, lot 65)",
+    "holding_period": "Overnight (about 18 hours; weekends longer)",
+    "data_needed": [
+      "daily_fo",
+      "intraday"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "Bhat, Pandey, Rao (J. Futures Markets 2024): overnight short Nifty option returns positive and significant, intraday negative. Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026: gross +Rs 24,344 (246 nights, win 64%, PF 1.10, worst night -Rs 37,573), after Rs 20/order and slippage -Rs 3,372. Overnight iron condor gross -Rs 2,629, net -Rs 40,543.",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "Naked straddle margin exceeds the account; the winged version fits on margin but lost money after costs.",
+    "sources": [
+      "https://ideas.repec.org/a/wly/jfutmk/v44y2024i8p1320-1337.html",
+      "https://www.quantsapp.com/backtesting/strategies/overnight-short-options-close-to-open",
+      "https://www.quantsapp.com/backtesting/strategies/btst-overnight-iron-condor-4-6-strikes-1515-to-1515",
+      "https://www.quantsapp.com/backtesting/strategies/overnight-credit-spread-1520-0920"
+    ]
+  },
+  {
+    "id": "options_selling__delta_hedged_short_straddle",
+    "name": "Delta-hedged short straddle (futures hedge)",
+    "family": "volatility_risk_premium",
+    "rule": "At 15:00, entry_sessions_before sessions before weekly expiry, sell lots ATM calls and puts. Every check_min minutes compute net delta of options plus futures held; when it is more than delta_band_lots futures lots from zero, trade near-month Nifty futures to the nearest whole lot of zero. Close everything if the position is down mtm_sl_pct of credit; else close at 15:15 on expiry day. Academic form: daily re-hedge, hold to expiry.",
+    "params": {
+      "entry_sessions_before": 3,
+      "lots": 4,
+      "check_min": 5,
+      "delta_band_lots": 1,
+      "mtm_sl_pct": 50
+    },
+    "instruments": "Nifty weekly or monthly options plus near-month Nifty futures",
+    "holding_period": "3 trading days (academic: to expiry)",
+    "data_needed": [
+      "daily_fo",
+      "intraday"
+    ],
+    "evidence": "strong_academic",
+    "india_evidence": true,
+    "reported_performance": "Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026 (4 lots): gross +Rs 90,806 (52 trades, win 71%, PF 1.16, worst trade -Rs 3,28,932, max DD Rs 3,90,930), net -Rs 9,040. US delta-hedged short S&P options Mar 1996-Dec 2015 positive gross (Israelov and Tummala). India: variance risk priced (Sankar et al. 2020).",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "Needs several naked option lots plus futures (about Rs 1.77 lakh per futures contract).",
+    "sources": [
+      "https://www.quantsapp.com/backtesting/strategies/short-straddle-futures-delta-hedge-theta-harvest",
+      "https://www.quantsapp.com/backtesting/strategies/long-straddle-gamma-scalp-futures-75-delta-band",
+      "https://www.cxoadvisory.com/equity-options/best-index-options-to-sell",
+      "https://econpapers.repec.org/RePEc:eee:reveco:v:70:y:2020:i:c:p:321-334",
+      "https://quantpedia.com/strategies/volatility-risk-premium-effect"
+    ]
+  },
+  {
+    "id": "options_selling__trend_regime_credit_spreads",
+    "name": "Directional credit spreads by trend regime (bull put / bear call)",
+    "family": "credit_spreads",
+    "rule": "At 15:15 when flat and India VIX rank >= iv_rank_floor: if daily ADX(14) > adx_trend, direction = Supertrend(10,3) at the previous close. Up: sell the OTM put nearest short_delta, buy the put wing_strikes strikes lower. Down: mirror with calls. Range: both (iron condor). Use the Nifty weekly with min_dte to max_dte days left. Exit at tp_pct of credit, at a loss of sl_pct of credit, or 15:15 one session before expiry.",
+    "params": {
+      "adx_trend": 20,
+      "short_delta": 0.175,
+      "wing_strikes": 4,
+      "min_dte": 5,
+      "max_dte": 9,
+      "tp_pct": 50,
+      "sl_pct": 100,
+      "iv_rank_floor": "not stated"
+    },
+    "instruments": "Nifty 50 weekly index options (NSE, Tuesday expiry, lot 65)",
+    "holding_period": "1 to 8 trading days",
+    "data_needed": [
+      "daily_fo",
+      "daily_index"
+    ],
+    "evidence": "negative",
+    "india_evidence": true,
+    "reported_performance": "Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026: regime spreads gross +Rs 5 (60 trades, win 70%, PF 1.00), net -Rs 44,361. 5-minute Supertrend(80,3.6)+ADX ITM spreads gross +Rs 777, net -Rs 13,081. Intraday Supertrend hedged selling gross +Rs 45,838, net -Rs 9,341.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "One spread needs about Rs 42,000-55,000 (about Rs 75,000-87,000 on its expiry day, avoided by exiting the session before). Fits with buffer, but tested versions were flat to negative after costs.",
+    "sources": [
+      "https://www.quantsapp.com/backtesting/strategies/regime-driven-credit-spread-supertrend-adx-ivrank",
+      "https://www.quantsapp.com/backtesting/strategies/supertrend-adx-weekly-credit-spread-roll",
+      "https://www.quantsapp.com/backtesting/strategies/directional-option-selling-supertrend-martingale",
+      "https://www.quantsapp.com/backtesting/strategies/daily-supertrend-bb-outside-band-option-write"
+    ]
+  },
+  {
+    "id": "options_selling__systematic_put_write_spread",
+    "name": "Systematic monthly put-write (PUT-index style) as a put credit spread",
+    "family": "volatility_risk_premium",
+    "rule": "On the first session after each Nifty monthly expiry sell 1 lot of the put at strike nearest spot x (1 - otm_pct/100) on the new monthly and buy the put hedge_pct of spot lower (omit the hedge for the classic cash-secured form). Hold to exit_days_before trading days before expiry, or exit earlier at a loss of sl_mult x credit. Repeat every month.",
+    "params": {
+      "otm_pct": 0,
+      "hedge_pct": 4,
+      "exit_days_before": 1,
+      "sl_mult": 2.0,
+      "lots": 1
+    },
+    "instruments": "Nifty 50 monthly index options (NSE, last-Tuesday expiry, lot 65)",
+    "holding_period": "About 1 month",
+    "data_needed": [
+      "daily_fo",
+      "daily_index"
+    ],
+    "evidence": "strong_academic",
+    "india_evidence": true,
+    "reported_performance": "US: ATM straddle selling with a 15% OTM crash put, 1986-1995, 1.94% a month at 5% premium exposure (Coval-Shumway via Quantpedia); short puts beat calls 1996-2015 (Israelov-Tummala). India: Pillai (SSRN, unverified snippet) finds put-write net negative Jan 2015-Apr 2025. Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026: EMA-filtered monthly put write gross -Rs 5,940 (5 trades).",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Naked put needs Rs 1.3-2 lakh. The spread form fits (about Rs 45,000-55,000) but the hedge removes much of the premium; Indian net-of-cost evidence is negative.",
+    "sources": [
+      "https://quantpedia.com/strategies/volatility-risk-premium-effect",
+      "https://www.cxoadvisory.com/equity-options/best-index-options-to-sell",
+      "https://www.aqr.com/-/media/AQR/Documents/Journal-Articles/JoAI-Embracing-Downside-Risk.pdf?sc_lang=en",
+      "https://www.quantsapp.com/backtesting/strategies/monthly-put-write-ema-cross-ivp50-15day-exit"
+    ]
+  },
+  {
+    "id": "options_selling__calendar_diagonal_spreads",
+    "name": "Calendar, double calendar and diagonal spreads",
+    "family": "calendar_diagonal",
+    "rule": "At 09:31 on the session after a weekly expiry, if yesterday's India VIX close is between vix_min and vix_max: sell the short_delta call and put of the current Nifty weekly; buy the next-weekly call and put priced closest to the sold ones. Exit at profit of target_margin_pct or loss of stop_margin_pct of assumed margin, else the session before near expiry. Variant: enter an ATM calendar when near/next ATM IV ratio >= 1.10; exit at ratio <= 1.00.",
+    "params": {
+      "vix_min": 10,
+      "vix_max": 13.5,
+      "short_delta": 0.15,
+      "target_margin_pct": 1.5,
+      "stop_margin_pct": 2.0,
+      "margin_per_lot_assumed": 60000,
+      "iv_ratio_entry": 1.1,
+      "iv_ratio_exit": 1.0
+    },
+    "instruments": "Nifty weekly options, current and next expiry (or near and next monthly for diagonals)",
+    "holding_period": "2 to 5 trading days (diagonals up to 4 weeks)",
+    "data_needed": [
+      "daily_fo",
+      "daily_index"
+    ],
+    "evidence": "negative",
+    "india_evidence": true,
+    "reported_performance": "Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026: double calendar gross -Rs 1,916 (29 trades, win 55%), net -Rs 11,263. IV-inversion calendar gross +Rs 2,200 (3 trades). Monthly double diagonal gross -Rs 23,387, net -Rs 31,459.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "About Rs 60,000 margin off expiry day, but the calendar margin benefit is withdrawn on the near leg's expiry day, so it must be closed the session before; eight orders against a small target.",
+    "sources": [
+      "https://www.quantsapp.com/backtesting/strategies/weekly-double-calendar-vix-band-margin-pct-exits",
+      "https://www.quantsapp.com/backtesting/strategies/iv-term-structure-inversion-calendar",
+      "https://www.quantsapp.com/backtesting/strategies/mild-bullish-double-diagonal-call-calendar-put-diagonal",
+      "https://zerodha.com/z-connect/business-updates/sebis-new-rules-for-index-derivatives-heres-whats-changing"
+    ]
+  },
+  {
+    "id": "options_selling__jade_lizard_big_lizard",
+    "name": "Jade lizard and big lizard",
+    "family": "skewed_credit_structures",
+    "rule": "At 09:30 on the first session <= entry_dte days before Nifty monthly expiry sell the put_delta put and the call_delta call; buy the call at the narrowest width between min_width and max_width points for which total credit >= width (skip the month if none). Exit at tp_pct of credit, at a loss of sl_mult x credit, or exit_dte days before expiry. Big lizard: sell ATM straddle, buy a call about 2% higher, target 25% of credit.",
+    "params": {
+      "entry_dte": 14,
+      "put_delta": 0.2,
+      "call_delta": 0.3,
+      "min_width": 100,
+      "max_width": 300,
+      "tp_pct": 50,
+      "sl_mult": 2.0,
+      "exit_dte": 2
+    },
+    "instruments": "Nifty 50 monthly index options (NSE, last-Tuesday expiry, lot 65)",
+    "holding_period": "About 6 to 12 days",
+    "data_needed": [
+      "daily_fo"
+    ],
+    "evidence": "anecdotal",
+    "india_evidence": true,
+    "reported_performance": "Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026: jade lizard gross +Rs 21,967 (5 trades, all winners, stop never tested). Big lizard gross -Rs 1,12,524 (13 trades, 11 winners, one loss of Rs 1,95,410).",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "Contains a naked short put (and a naked straddle for the big lizard): margin above Rs 1.3 lakh with unlimited downside.",
+    "sources": [
+      "https://www.quantsapp.com/backtesting/strategies/jade-lizard-nifty-credit-exceeds-call-width",
+      "https://www.quantsapp.com/backtesting/strategies/big-lizard-short-straddle-long-otm-call"
+    ]
+  },
+  {
+    "id": "options_selling__ratio_spread_batman",
+    "name": "Ratio spreads, Batman (double 1x3) and credit broken-wing butterfly",
+    "family": "ratio_structures",
+    "rule": "Batman: at 10:00 buy 1 ATM call and 1 ATM put, sell ratio calls short_offset strikes above and ratio puts short_offset strikes below (nearest weekly). Close if P&L <= -sl_per_lot; after P&L >= lock_at_per_lot close if it falls to trail_lock_pct of its best; close at 15:15. Front ratio: 3 sessions before expiry buy 1 ATM call, sell 2 calls 150 points higher, buy 1 call one strike above; exit above the upper breakeven or at expiry.",
+    "params": {
+      "ratio": 3,
+      "short_offset_strikes": 3,
+      "sl_per_lot": 3000,
+      "lock_at_per_lot": 2000,
+      "trail_lock_pct": 50,
+      "front_ratio_short_offset_pts": 150
+    },
+    "instruments": "Nifty 50 weekly index options (NSE, Tuesday expiry, lot 65)",
+    "holding_period": "Intraday (Batman) or 3 trading days (front ratio)",
+    "data_needed": [
+      "intraday",
+      "daily_fo"
+    ],
+    "evidence": "negative",
+    "india_evidence": true,
+    "reported_performance": "Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026: Batman gross +Rs 51,217 (246 trades, win 68%, PF 1.24), net -Rs 10,531. Front 1x2 call ratio gross -Rs 52,004 (52 trades, win 33%), net -Rs 78,462. Credit broken-wing butterfly gross -Rs 3,172 (2 trades).",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "Batman and ratio spreads carry net naked short options; only the broken-wing butterfly is defined-risk and it almost never qualifies.",
+    "sources": [
+      "https://www.quantsapp.com/backtesting/strategies/intraday-batman-double-1x3-ratio-1000",
+      "https://www.quantsapp.com/backtesting/strategies/front-ratio-call-spread-1x2-convert-on-approach",
+      "https://www.quantsapp.com/backtesting/strategies/weekly-broken-wing-call-butterfly-credit"
+    ]
+  },
+  {
+    "id": "options_selling__index_covered_call_wheel",
+    "name": "Index covered call on futures, futures wheel, poor man's covered call",
+    "family": "covered_call_overwrite",
+    "rule": "On the first session of each monthly series at 09:20 buy 1 lot near-month Nifty future and sell 1 lot of the call at the first strike >= future x (1 + otm_pct/100). No stop. Close both legs at 15:15 on monthly expiry day and repeat. Wheel variant: sell monthly puts for about 1% premium; if in the money at expiry switch to long future plus short call until called away.",
+    "params": {
+      "otm_pct": 3.0,
+      "wheel_premium_pct": 1.0,
+      "lots": 1
+    },
+    "instruments": "Nifty near-month futures plus Nifty monthly options",
+    "holding_period": "1 month",
+    "data_needed": [
+      "daily_fo",
+      "daily_index"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026: covered call gross -Rs 2,87,716 (13 cycles; March 2026 alone -Rs 2,15,868). Futures wheel gross -Rs 1,58,644. Poor man's covered call gross -Rs 90,966, net -Rs 1,53,187.",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "One Nifty future needs about Rs 1.77 lakh margin and is Rs 16 lakh of market exposure, more than ten times the account.",
+    "sources": [
+      "https://www.quantsapp.com/backtesting/strategies/covered-call-index-monthly-3pct-otm",
+      "https://www.quantsapp.com/backtesting/strategies/index-wheel-1pct-premium-puts-calls-futures",
+      "https://www.quantsapp.com/backtesting/strategies/poor-mans-covered-call-nifty-deep-itm-leap-weekly-short",
+      "https://www.angelone.in/news/market-updates/nse-reduces-lot-sizes-in-nifty-and-bank-nifty-derivatives"
+    ]
+  },
+  {
+    "id": "options_selling__event_iv_crush_straddle",
+    "name": "Event IV-crush selling (RBI policy, Union Budget, election count)",
+    "family": "event_volatility",
+    "rule": "Five minutes before the close on the eve of each RBI policy day or Union Budget day sell ATM call and put of the nearest Nifty expiry after the event and buy wings wing_pct of the forward away. Close at a loss of sl_pct of net credit, else at 10:45 on RBI day or 15:15 on Budget day. Budget-day variant: at 10:15 sell ATM straddle, 20% stop per leg, exit 15:25.",
+    "params": {
+      "wing_pct": 3.0,
+      "sl_pct": 50,
+      "rbi_exit_time": "10:45",
+      "budget_exit_time": "15:15",
+      "budget_intraday_entry": "10:15",
+      "budget_leg_sl_pct": 20
+    },
+    "instruments": "Nifty weekly or monthly options spanning the event",
+    "holding_period": "Overnight to 1 day",
+    "data_needed": [
+      "daily_fo",
+      "events",
+      "intraday"
+    ],
+    "evidence": "negative",
+    "india_evidence": true,
+    "reported_performance": "Quantsapp, Nifty 1 lot, 1 Oct 2025-30 Sep 2026: event-eve hedged straddle gross -Rs 19,594 (6 events, 2 winners, PF 0.09), net -Rs 20,806. Budget-day intraday straddle 1 Feb 2026: -Rs 5,140 (both legs stopped). The opposite trade (long straddle over RBI policy) made +Rs 15,200.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "With 3% wings the margin fits one lot off expiry day, but the evidence is negative and samples are tiny (6 events, 1 Budget). Better used as a rule to skip event days.",
+    "sources": [
+      "https://www.quantsapp.com/backtesting/strategies/event-eve-short-straddle-iv-crush",
+      "https://www.quantsapp.com/backtesting/strategies/budget-day-intraday-short-straddle-leg-sl",
+      "https://www.quantsapp.com/backtesting/strategies/election-result-event-vol-trade",
+      "https://www.quantsapp.com/backtesting/strategies"
+    ]
+  }
+]
