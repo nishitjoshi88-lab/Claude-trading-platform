@@ -50,36 +50,54 @@ MAX_WORKERS = 6
 # --------------------------------------------------------------------------
 # Download
 # --------------------------------------------------------------------------
-def zip_name(date) -> str:
+# Two files per trading day, told apart by `kind`:
+#   "bhav"  the bhavcopy (every contract, prices, settlement, open interest)
+#   "mkt"   the market activity report, used only for lot sizes: it prints
+#           traded quantity next to the number of contracts. The archive
+#           starts on MKT_START; nothing older exists.
+MKT_URL = "https://{host}/archives/fo/mkt/fo{d:02d}{m:02d}{y}.zip"
+MKT_START = pd.Timestamp("2011-02-01")
+KINDS = ("bhav", "mkt")
+
+
+def zip_name(date, kind: str = "bhav") -> str:
     d = pd.Timestamp(date)
+    if kind == "mkt":
+        return f"fo{d.day:02d}{d.month:02d}{d.year}.zip"
     return f"fo{d.day:02d}{MONTHS[d.month - 1]}{d.year}bhav.csv.zip"
 
 
-def zip_path(date, root=None) -> Path:
+def zip_path(date, root=None, kind: str = "bhav") -> Path:
     d = pd.Timestamp(date)
-    return data_root(root) / "raw" / "fo" / "zip" / str(d.year) / zip_name(d)
+    sub = "mkt" if kind == "mkt" else "zip"
+    return data_root(root) / "raw" / "fo" / sub / str(d.year) / zip_name(d, kind)
 
 
-def zip_url(date, host: str = HOSTS[0]) -> str:
+def zip_url(date, host: str = HOSTS[0], kind: str = "bhav") -> str:
     d = pd.Timestamp(date)
+    if kind == "mkt":
+        return MKT_URL.format(host=host, y=d.year, m=d.month, d=d.day)
     return URL.format(host=host, y=d.year, mon=MONTHS[d.month - 1], d=d.day)
 
 
-def _missing_file(root=None) -> Path:
-    return data_root(root) / "raw" / "fo" / "missing.json"
+def _missing_file(root=None, kind: str = "bhav") -> Path:
+    name = "mkt_missing.json" if kind == "mkt" else "missing.json"
+    return data_root(root) / "raw" / "fo" / name
 
 
-def load_missing(root=None) -> set[str]:
-    f = _missing_file(root)
+def load_missing(root=None, kind: str = "bhav") -> set[str]:
+    f = _missing_file(root, kind)
     return set(json.loads(f.read_text())["dates"]) if f.exists() else set()
 
 
-def save_missing(dates: set[str], root=None) -> None:
-    f = _missing_file(root)
+def save_missing(dates: set[str], root=None, kind: str = "bhav") -> None:
+    f = _missing_file(root, kind)
     f.parent.mkdir(parents=True, exist_ok=True)
     tmp = f.with_suffix(".tmp")
-    tmp.write_text(json.dumps({"note": "dates for which the archive returned HTTP 404 "
-                                       "(weekends, holidays)", "dates": sorted(dates)}, indent=0))
+    note = ("trading days for which the archive has no market activity report (HTTP 404)"
+            if kind == "mkt" else
+            "dates for which the archive returned HTTP 404 (weekends, holidays)")
+    tmp.write_text(json.dumps({"note": note, "dates": sorted(dates)}, indent=0))
     tmp.replace(f)
 
 
@@ -104,11 +122,11 @@ def _session():
     return _local.s
 
 
-def fetch_one(date, root=None, retries: int = 5, get=None) -> str:
+def fetch_one(date, root=None, retries: int = 5, get=None, kind: str = "bhav") -> str:
     """Fetch one day's file into the cache. Returns 'ok', 'missing' (every
     host answered 404) or 'error' (anything else; nothing is cached, so the
     next run tries again). `get(url) -> (status, bytes)` can be injected."""
-    path = zip_path(date, root)
+    path = zip_path(date, root, kind)
     if get is None:
         def get(url):
             r = _session().get(url, timeout=60)
@@ -118,7 +136,7 @@ def fetch_one(date, root=None, retries: int = 5, get=None) -> str:
         statuses = []
         for host in HOSTS:
             try:
-                status, content = get(zip_url(date, host))
+                status, content = get(zip_url(date, host, kind))
             except Exception as e:                       # network error: retry
                 statuses.append(f"{type(e).__name__}")
                 continue
@@ -135,34 +153,42 @@ def fetch_one(date, root=None, retries: int = 5, get=None) -> str:
         if statuses and statuses[0] == 404 and all(s in (403, 404) for s in statuses):
             return "missing"
         time.sleep(min(30.0, 1.5 * 2 ** attempt))
-    log.warning("could not fetch %s: %s", zip_name(date), statuses)
+    log.warning("could not fetch %s: %s", zip_name(date, kind), statuses)
     return "error"
+
+
+def _fetch_many(todo, root, workers, get, kind, missing) -> dict:
+    out = {"ok": 0, "missing": 0, "error": 0, "errors": []}
+    if not todo:
+        return out
+    log.info("downloading %d %s file(s) with %d workers", len(todo), kind, workers)
+    t0 = time.time()
+    with ThreadPoolExecutor(workers) as ex:
+        results = ex.map(lambda d: fetch_one(d, root, get=get, kind=kind), todo)
+        for i, (d, res) in enumerate(zip(todo, results)):
+            out[res] += 1
+            if res == "missing":
+                missing.add(d.strftime("%Y-%m-%d"))
+            elif res == "error":
+                out["errors"].append(d.strftime("%Y-%m-%d"))
+            if (i + 1) % 250 == 0:
+                save_missing(missing, root, kind)
+                log.info("  %d/%d  ok=%d missing=%d error=%d  %.0fs", i + 1, len(todo),
+                         out["ok"], out["missing"], out["error"], time.time() - t0)
+    save_missing(missing, root, kind)
+    return out
 
 
 def download(start, end, root=None, workers: int = MAX_WORKERS, recheck_missing: bool = False,
              get=None) -> dict:
-    """Fetch every calendar day in [start, end] that is not cached yet.
-    Weekends are probed too: NSE holds special sessions on some of them."""
-    workers = min(workers, MAX_WORKERS)
+    """Fetch the bhavcopy of every calendar day in [start, end] that is not
+    cached yet. Weekends are probed too: NSE holds special sessions on some."""
+    workers = max(1, min(workers, MAX_WORKERS))
     days = pd.date_range(start, end, freq="D")
     missing = set() if recheck_missing else load_missing(root)
     todo = [d for d in days if not zip_path(d, root).exists() and d.strftime("%Y-%m-%d") not in missing]
-    out = {"ok": 0, "missing": 0, "error": 0, "cached": len(days) - len(todo), "errors": []}
-    if todo:
-        log.info("downloading %d day(s) with %d workers", len(todo), workers)
-        t0 = time.time()
-        with ThreadPoolExecutor(workers) as ex:
-            for i, (d, res) in enumerate(zip(todo, ex.map(lambda d: fetch_one(d, root, get=get), todo))):
-                out[res] += 1
-                if res == "missing":
-                    missing.add(d.strftime("%Y-%m-%d"))
-                elif res == "error":
-                    out["errors"].append(d.strftime("%Y-%m-%d"))
-                if (i + 1) % 250 == 0:
-                    save_missing(missing, root)
-                    log.info("  %d/%d  ok=%d missing=%d error=%d  %.0fs", i + 1, len(todo),
-                             out["ok"], out["missing"], out["error"], time.time() - t0)
-        save_missing(missing, root)
+    out = _fetch_many(todo, root, workers, get, "bhav", missing)
+    out["cached"] = len(days) - len(todo)
     # A long run of weekdays with no file means the archive has ended, not a holiday.
     have = [zip_path(d, root).exists() for d in days]
     gap = run = 0
@@ -176,8 +202,22 @@ def download(start, end, root=None, workers: int = MAX_WORKERS, recheck_missing:
     return out
 
 
-def cached_dates(start, end, root=None) -> list[pd.Timestamp]:
-    return [d for d in pd.date_range(start, end, freq="D") if zip_path(d, root).exists()]
+def download_mkt(start, end, root=None, workers: int = MAX_WORKERS, recheck_missing: bool = False,
+                 get=None) -> dict:
+    """Fetch the market activity report of every day in [start, end] that has
+    a cached bhavcopy (i.e. was a trading day) and lies on or after MKT_START."""
+    workers = max(1, min(workers, MAX_WORKERS))
+    days = [d for d in cached_dates(max(pd.Timestamp(start), MKT_START), end, root)]
+    missing = set() if recheck_missing else load_missing(root, "mkt")
+    todo = [d for d in days if not zip_path(d, root, "mkt").exists()
+            and d.strftime("%Y-%m-%d") not in missing]
+    out = _fetch_many(todo, root, workers, get, "mkt", missing)
+    out["cached"] = len(days) - len(todo)
+    return out
+
+
+def cached_dates(start, end, root=None, kind: str = "bhav") -> list[pd.Timestamp]:
+    return [d for d in pd.date_range(start, end, freq="D") if zip_path(d, root, kind).exists()]
 
 
 # --------------------------------------------------------------------------
@@ -600,7 +640,7 @@ def derive_lots(days: pd.DataFrame) -> pd.Series:
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="python -m quant.data.nse_fo")
     sub = p.add_subparsers(dest="cmd", required=True)
-    for name in ("download",):
+    for name in ("download", "download-mkt"):
         b = sub.add_parser(name)
         b.add_argument("--start", required=True)
         b.add_argument("--end", required=True)
@@ -611,6 +651,8 @@ def main(argv=None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
     if a.cmd == "download":
         print(json.dumps(download(a.start, a.end, a.root, a.workers, a.recheck_missing)))
+    if a.cmd == "download-mkt":
+        print(json.dumps(download_mkt(a.start, a.end, a.root, a.workers, a.recheck_missing)))
     return 0
 
 

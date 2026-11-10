@@ -73,10 +73,12 @@ def session_days(bars: pd.DataFrame, min_bars: int = 300) -> pd.DatetimeIndex:
     return pd.DatetimeIndex(counts[counts >= min_bars].index)
 
 
-def build_grids(root=None, calendar_symbol: str = "NIFTY") -> dict:
-    """Convert every downloaded symbol to a grid file. Returns bar counts."""
+def build_grids(root=None, calendar_symbol: str = "NIFTY", grid: str = "grid") -> dict:
+    """Convert every downloaded symbol to a grid file. Returns bar counts.
+    Bars are read through the lock, so the research grid never contains the
+    protected period; the final test builds a separate grid directory."""
     days = session_days(upstox.load_bars(calendar_symbol, root=root))
-    out_dir = data_root(root) / "intraday1m" / "grid"
+    out_dir = data_root(root) / "intraday1m" / grid
     out_dir.mkdir(parents=True, exist_ok=True)
     pd.Series(days).to_frame("day").to_parquet(out_dir / "_days.parquet")
     report = {}
@@ -125,19 +127,19 @@ class ICtx:
         return a, b
 
 
-def load_ictx(root=None, max_rank: int | None = None) -> ICtx:
+def load_ictx(root=None, max_rank: int | None = None, grid: str = "grid") -> ICtx:
     """Context over the downloaded universe (stocks only in `symbols`;
     indices are available through ctx.grid)."""
     d = data_root(root) / "intraday1m"
-    days = pd.DatetimeIndex(pd.read_parquet(d / "grid" / "_days.parquet")["day"])
+    days = pd.DatetimeIndex(pd.read_parquet(d / grid / "_days.parquet")["day"])
     uni = upstox.load_universe(root)["symbols"]
-    have = {p.stem for p in (d / "grid").glob("*.npz")}
+    have = {p.stem for p in (d / grid).glob("*.npz")}
     ranks = {s: v["rank"] for s, v in uni.items() if s in have}
     symbols = sorted((s for s, r in ranks.items() if r > 0 and (max_rank is None or r <= max_rank)),
                      key=lambda s: ranks[s])
 
     def loader(symbol: str) -> Grid:
-        return Grid(days, **_load(str(d / "grid" / f"{symbol}.npz")))
+        return Grid(days, **_load(str(d / grid / f"{symbol}.npz")))
 
     return ICtx(days, symbols, ranks, loader)
 
