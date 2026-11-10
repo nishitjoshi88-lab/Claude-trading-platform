@@ -87,7 +87,7 @@ def build_grids(root=None, calendar_symbol: str = "NIFTY") -> dict:
     return report
 
 
-@lru_cache(maxsize=64)
+@lru_cache(maxsize=140)
 def _load(path: str) -> dict:
     with np.load(path) as z:
         return {f: z[f] for f in FIELDS}
@@ -108,7 +108,7 @@ class ICtx:
             g = self._loader(symbol)
             if self._cut is not None:
                 g = g.cut(*self._cut)
-            if len(self._cache) > 40:
+            if len(self._cache) > 140:
                 self._cache.pop(next(iter(self._cache)))
             self._cache[symbol] = g
         return self._cache[symbol]

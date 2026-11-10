@@ -39,6 +39,7 @@ WINDOWS = {
     "options": {"train": ("2008-01-01", "2014-12-31"), "valid": ("2015-01-01", "2021-12-31")},
     "intraday": {"train": ("2022-01-01", "2023-12-31"), "valid": ("2024-01-01", "2024-12-31")},
 }
+INTRADAY_MAX_RANK = 120          # intraday strategies are evaluated on the 120 most liquid stocks (end-2021 ranking)
 RESULTS = Path(__file__).resolve().parents[2] / "results" / "research"
 
 
@@ -243,7 +244,7 @@ def _sim_all(spec: Spec, plan, ctx, cfg) -> dict:
 def default_ctx(spec: Spec):
     if spec.kind == "intraday":
         from ..intraday import load_ictx
-        return load_ictx()
+        return load_ictx(max_rank=INTRADAY_MAX_RANK)
     return load_ctx(spec.subset)
 
 

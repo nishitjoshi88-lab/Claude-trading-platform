@@ -90,3 +90,75 @@ python -m quant.engine run <id>          # train + validation, saved to results/
 python -m quant.engine run --family xs_momentum --jobs 2
 python -m quant.engine board --family xs_momentum
 ```
+
+# Intraday strategies on one-minute bars
+
+Register with `kind="intraday"`. The function receives an `ICtx` and returns
+an `IntradayPlan`. Working example: `quant/strategies/reference/intraday_examples.py`.
+
+```python
+from quant.engine import register
+from quant.intraday import ICtx, IntradayPlan, events, minute
+from quant.intraday import features as F
+
+@register("orb__basic", family="opening_range", kind="intraday",
+          grid={"or_minutes": [15, 30]}, cards=("intraday_stock_selection__stocks_in_play_rvol_orb",))
+def orb(ctx: ICtx, or_minutes=15) -> IntradayPlan:
+    signals = {}
+    for s in ctx.symbols:
+        g = ctx.grid(s)                      # g.open/high/low/close/volume, each (days, 375)
+        ...
+        signals[s] = events(entry, stop=stop_price, score=score)
+    return IntradayPlan(signals, target_r=2.0)
+```
+
+## Data
+
+- `ctx.symbols`: the 120 most liquid NSE stocks (ranked at end-2021), most liquid first. `ctx.ranks[s]` is the rank.
+- `ctx.days`: 738 full sessions, 2022-01-03 to 2024-12-31. Train is 2022-2023, validation is 2024. Later data is not on disk.
+- `ctx.grid(s)`: bars for a stock. Also `ctx.grid("NIFTY")`, `"BANKNIFTY"`, `"INDIAVIX"` (index volume is empty).
+- Columns are minutes: column 0 is 09:15, column 374 is 15:29. `minute("10:30")` gives the column.
+- NaN means no trade in that minute. Use `F.last_price(g)` for a gap-free price.
+- There is no separate daily file. Build daily values from the grid with the helpers below, which only look backward.
+
+## Features (`quant/intraday/features.py`)
+
+`last_price`, `day_open`, `prev_close`, `gap`, `cum_high`, `cum_low`, `opening_range(g, minutes)`,
+`cum_volume`, `vwap`, `relative_volume(g, lookback)`, `daily_range_avg(g, lookback)` (average daily
+range as a fraction of price over previous sessions), `prev_day(values)`, `returns_since_open`,
+`minute_returns`. `day_close(g)` is the session's final price: use it only through `prev_day(...)`.
+
+Anything you compute yourself must use only minutes at or before the signal minute and only earlier
+days. Typical mistakes: a day's final high, low, close or total volume used during that day; ranking
+stocks at 09:30 with a value that includes later minutes; statistics over the whole sample.
+
+## Signals and the plan
+
+- `events(entry, stop=None, target=None, score=None, exit=None)`: `entry` is a (days, 375) array with
+  +1 (long) or -1 (short) at the minute whose close triggers the trade. The fill is the next minute's
+  open. `stop` and `target` are prices, as (days, 375) grids or per-day arrays. `score` ranks competing
+  entries (higher first). `exit` is a (days, 375) boolean grid: leave at the next minute's open.
+- `IntradayPlan(signals, stop_pct, target_pct, target_r, exit_col, entry_from, entry_until,
+  trades_per_symbol, risk_per_trade, max_notional, max_positions, max_trades_per_day, daily_loss_limit)`.
+  Size is `risk_per_trade` x equity divided by the stop distance, capped at `max_notional` x equity
+  and by 5x total leverage. Everything is closed at `exit_col` (default 15:15).
+- Shorts are allowed only in stocks ranked 150 or better (all of `ctx.symbols` qualify).
+
+## What the first real test showed
+
+A plain opening-range breakout on all 120 stocks loses about half the account per year: roughly
+4 to 5 trades a day, each paying about 0.15-0.2% of its value in charges and slippage, with almost no
+edge before costs. So:
+
+- Costs per round trip are about 0.15-0.2% of trade value. A stop 0.5% away means costs alone are
+  0.3-0.4 of the amount risked. Prefer wider stops, larger targets, and few trades per day.
+- Select hard. A strategy that trades every stock every day cannot win.
+- Report what you find even if every variant loses. A clear negative result is useful.
+
+## Rules
+
+1. Fix the parameter grid before running; at most 8 combinations; first value is the default from the source.
+2. Do not redesign a rule because validation is poor. Fix real bugs only.
+3. `python -m quant.engine check <id>` must pass (it hides later bars and re-runs your function).
+4. Run evaluations one at a time (`python -m quant.engine run <id>`); the machine is shared.
+5. Do not edit anything under `quant/engine`, `quant/intraday`, `quant/data`. Report problems instead.
