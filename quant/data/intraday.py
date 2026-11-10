@@ -402,6 +402,9 @@ def fetch(root: Path, end: pd.Timestamp, only: Iterable[str] | None = None, refr
             {"source": src.url, "licence": src.licence, "fetched_utc": pd.Timestamp.now("UTC").isoformat(),
              "end": str(end.date()), "files": len(jobs), "new": st["ok"], "cached": st["cached"],
              "failed": st["failed"]}, indent=1))
+    if not only or "nse_ref" in only:
+        st = run_downloads([(NSE_EQUITY_LIST_URL, raw_dir(root, "nse_ref") / "EQUITY_L.csv", None)], "nse_ref")
+        report["nse_ref"] = {"files": 1, **st}
     return report
 
 
@@ -662,6 +665,39 @@ def normalise(df: pd.DataFrame, misfiled_ratio: float | None = None) -> tuple[pd
 
 
 # --------------------------------------------------------------------------
+# listing dates (reference data, used only to cut rows that predate a listing)
+# --------------------------------------------------------------------------
+
+NSE_EQUITY_LIST_URL = "https://archives.nseindia.com/content/equities/EQUITY_L.csv"
+
+
+def parse_listing_dates(text: str) -> dict[str, pd.Timestamp]:
+    """NSE 'EQUITY_L.csv' -> {symbol: date of listing}."""
+    import io
+    df = pd.read_csv(io.StringIO(text), dtype=str)
+    df.columns = [c.strip().upper() for c in df.columns]
+    dates = pd.to_datetime(df["DATE OF LISTING"].str.strip(), format="%d-%b-%Y", errors="coerce")
+    return {s.strip(): d for s, d in zip(df["SYMBOL"], dates) if pd.notna(d)}
+
+
+def load_listing_dates(root: Path) -> dict[str, pd.Timestamp]:
+    f = raw_dir(root, "nse_ref") / "EQUITY_L.csv"
+    return parse_listing_dates(f.read_text(errors="replace")) if f.exists() else {}
+
+
+def trim_before_listing(df: pd.DataFrame, listing: pd.Timestamp | None) -> tuple[pd.DataFrame, int]:
+    """Drop bars dated before the symbol's listing date.
+
+    The vendor these files come from re-uses instrument ids, so a file for a
+    recent listing can start with years of bars that belong to some earlier
+    instrument (IRCTC, SBILIFE, HDFCLIFE, IRFC)."""
+    if listing is None or df.empty:
+        return df, 0
+    keep = df["ts"] >= pd.Timestamp(listing).normalize()
+    return df[keep].reset_index(drop=True), int((~keep).sum())
+
+
+# --------------------------------------------------------------------------
 # build
 # --------------------------------------------------------------------------
 
@@ -693,14 +729,25 @@ def _span(df: pd.DataFrame) -> dict:
             "days": int(df["ts"].dt.normalize().nunique())}
 
 
-def write_split(df: pd.DataFrame, rel: str, root: Path, start, end) -> dict:
-    """Split at `end` and write <root>/intraday/<rel> and <root>/holdout/intraday/<rel>.
-    Only the row count and first/last timestamp of the holdout part are computed."""
+def write_split(df: pd.DataFrame, rel: str, root: Path, start, end, prep: Callable | None = None) -> dict:
+    """Split raw rows at `end`, then clean each side separately with `prep`
+    (frame -> (frame, stats)) and write <root>/intraday/<rel> and
+    <root>/holdout/intraday/<rel>.
+
+    The split happens before any cleaning so that nothing computed for the
+    research part can depend on later rows, and only the row count and the
+    first/last timestamp of the holdout part are ever reported."""
     research, holdout = split_holdout(df, end, start)
+    stats = None
+    if prep is not None:
+        research, stats = prep(research)
+        holdout, _ = prep(holdout)
     r_path, h_path = root / "intraday" / rel, root / "holdout" / "intraday" / rel
     info = {"research": _span(research),
             "holdout": {"rows": int(len(holdout)),
                         **({"first": str(holdout["ts"].min()), "last": str(holdout["ts"].max())} if len(holdout) else {})}}
+    if stats is not None:
+        info["cleaning"] = stats
     for part, path in ((research, r_path), (holdout, h_path)):
         if len(part):
             _write_parquet(part, path)
@@ -729,57 +776,81 @@ def load_aeron_symbol(root: Path, stem: str, end: pd.Timestamp) -> tuple[pd.Data
 
 
 def build_index(sym: str, root: Path, start, end) -> dict:
+    """Older history from aeron7 up to the day before the primary source starts,
+    then the primary source. The two are never mixed inside a day."""
     name, stem, src, rel_path, parser = INDEX_PLAN[sym]
-    primary, st_p = normalise(parser(raw_dir(root, src) / rel_path)[COLS])
-    first_day = primary["ts"].iloc[0].normalize()
+    primary = parser(raw_dir(root, src) / rel_path)[COLS]
+    first_day = primary["ts"].min().normalize()
     older, meta = load_aeron_symbol(root, stem, end)
-    older, st_o = normalise(older[COLS], MISFILED_RATIO.get(sym, 1.2))
-    older = older[older["ts"] < first_day]
-    df = pd.concat([older, primary], ignore_index=True)
-    df["volume"] = np.float32("nan")                # a spot index has no traded volume
-    info = write_split(df[COLS], f"{sym}_1min.parquet", root, start, end)
+    older = older[COLS]
+    raw = pd.concat([older[older["ts"] < first_day], primary], ignore_index=True)
+
+    def prep(part):
+        a, st_a = normalise(part[part["ts"] < first_day], MISFILED_RATIO.get(sym, 1.2))
+        b, st_b = normalise(part[part["ts"] >= first_day])
+        out = pd.concat([a, b], ignore_index=True)
+        out["volume"] = np.float32("nan")           # a spot index has no traded volume
+        return out[COLS], {"gh_aeron7": st_a, src: st_b}
+
+    info = write_split(raw, f"{sym}_1min.parquet", root, start, end, prep)
     info.update({"kind": "index", "index_name": name, "interval": "1min",
-                 "segments": [
-                     {"source": "gh_aeron7", "until": str((first_day - pd.Timedelta(days=1)).date()),
-                      "rows": int(len(older)), "cleaning": st_o, **meta},
-                     {"source": src, "from": str(first_day.date()), "rows": int(len(primary)), "cleaning": st_p}]})
+                 "segments": [{"source": "gh_aeron7", "until": str((first_day - pd.Timedelta(days=1)).date()), **meta},
+                              {"source": src, "from": str(first_day.date())}]})
     return info
 
 
 def build_future(sym: str, root: Path, start, end) -> dict:
     df, meta = load_aeron_symbol(root, FUT_PLAN[sym], end)
-    df, st = normalise(df, 1.2)
-    info = write_split(df[COLS + ["oi"]], f"{sym}_1min.parquet", root, start, end)
+
+    def prep(part):
+        out, st = normalise(part, 1.2)
+        return out[COLS + ["oi"]], {"gh_aeron7": st}
+
+    info = write_split(df, f"{sym}_1min.parquet", root, start, end, prep)
     info.update({"kind": "index_future_continuous", "interval": "1min",
-                 "segments": [{"source": "gh_aeron7", "rows": int(len(df)), "cleaning": st, **meta}]})
+                 "segments": [{"source": "gh_aeron7", **meta}]})
     return info
 
 
-def build_stock(sym: str, df: pd.DataFrame, source: str, root: Path, start, end, has_volume: bool) -> dict:
-    df, st = normalise(df[COLS])
-    if not has_volume:
-        df["volume"] = np.float32("nan")
-    info = write_split(df[COLS], f"{sym}_1min.parquet", root, start, end)
-    info.update({"kind": "stock", "interval": "1min", "has_volume": has_volume,
-                 "segments": [{"source": source, "rows": int(len(df)), "cleaning": st}]})
+def build_stock(sym: str, df: pd.DataFrame, source: str, root: Path, start, end, has_volume: bool,
+                listing: pd.Timestamp | None = None) -> dict:
+    df, n_pre = trim_before_listing(df, listing)
+
+    def prep(part):
+        out, st = normalise(part[COLS])
+        if not has_volume:
+            out["volume"] = np.float32("nan")
+        return out[COLS], {source: st}
+
+    info = write_split(df, f"{sym}_1min.parquet", root, start, end, prep)
+    info.update({"kind": "stock", "interval": "1min", "has_volume": has_volume, "segments": [{"source": source}],
+                 "listing_date": str(listing.date()) if listing is not None else None,
+                 "dropped_before_listing": n_pre})
     return info
+
+
+def clean_options(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
+    """Drop exact repeats of (ts, strike, right), bars outside the session,
+    non-positive or inverted prices and rows stamped after their expiry."""
+    n_in = len(df)
+    df = df.drop_duplicates(["ts", "strike", "right"], keep="first")
+    n_dup = n_in - len(df)
+    tod = df["ts"] - df["ts"].dt.normalize()
+    inside = (tod >= SESSION_OPEN) & (tod < SESSION_CLOSE)
+    bad = ((df[["open", "high", "low", "close"]] <= 0).any(axis=1) | (df["high"] < df["low"])
+           | (df["ts"] >= df["expiry"] + pd.Timedelta(days=1)))
+    out = df[inside & ~bad].sort_values(["ts", "strike", "right"], kind="stable").reset_index(drop=True)
+    return out[OPT_COLS], {"rows_in": int(n_in), "dropped_duplicate_rows": int(n_dup),
+                           "dropped_outside_session": int((~inside).sum()),
+                           "dropped_bad": int((inside & bad).sum()), "rows_out": int(len(out))}
 
 
 def build_options(und: str, root: Path, start, end) -> dict:
     base = raw_dir(root, "hf_thetrademarkk") / "options" / und
     out = {}
     for f in sorted(base.glob("*.parquet")):
-        df = parse_trademarkk_options(f)
-        n_in = len(df)
-        df = df.drop_duplicates(["ts", "strike", "right"], keep="first")
-        tod = df["ts"] - df["ts"].dt.normalize()
-        inside = (tod >= SESSION_OPEN) & (tod < SESSION_CLOSE)
-        bad = (df[["open", "high", "low", "close"]] <= 0).any(axis=1) | (df["high"] < df["low"]) | (df["ts"] > df["expiry"] + pd.Timedelta(days=1))
-        df2 = df[inside & ~bad].sort_values(["ts", "strike", "right"], kind="stable").reset_index(drop=True)
-        info = write_split(df2[OPT_COLS], f"options/{und}_1min/{f.stem}.parquet", root, start, end)
-        info["cleaning"] = {"rows_in": int(n_in), "dropped_duplicate_rows": int(n_in - len(df)),
-                            "dropped_outside_session": int((~inside).sum()), "dropped_bad": int((inside & bad).sum())}
-        out[f.stem] = info
+        out[f.stem] = write_split(parse_trademarkk_options(f), f"options/{und}_1min/{f.stem}.parquet",
+                                  root, start, end, clean_options)
     return out
 
 
@@ -815,6 +886,7 @@ def build(root: Path, start=None, end=None, symbols: Iterable[str] | None = None
                 man["symbols"][sym] = build_future(sym, root, start, end)
                 log(sym, man["symbols"][sym])
     if "stocks" in groups:
+        listing = load_listing_dates(root)
         done = set()
         base = raw_dir(root, "gh_akshaj23") / AKSHAJ_STOCK_DIR
         for f in sorted(base.glob("*_minute.csv")):
@@ -823,7 +895,8 @@ def build(root: Path, start=None, end=None, symbols: Iterable[str] | None = None
                 continue
             done.add(sym)
             if want is None or sym in want:
-                man["symbols"][sym] = build_stock(sym, parse_akshaj(f), "gh_akshaj23", root, start, end, True)
+                man["symbols"][sym] = build_stock(sym, parse_akshaj(f), "gh_akshaj23", root, start, end, True,
+                                                 listing.get(sym))
                 log(sym, man["symbols"][sym])
         shards = sorted((raw_dir(root, "hf_tiru8055") / "data").glob("*.parquet"))
         need_tiru = want is None or any(s not in done and s not in INDEX_PLAN and s not in FUT_PLAN for s in want)
@@ -832,7 +905,7 @@ def build(root: Path, start=None, end=None, symbols: Iterable[str] | None = None
                 sym = TIRU_ALIAS.get(name, name)
                 if name in TIRU_SKIP or sym in done or (want is not None and sym not in want):
                     continue
-                man["symbols"][sym] = build_stock(sym, df, "hf_tiru8055", root, start, end, False)
+                man["symbols"][sym] = build_stock(sym, df, "hf_tiru8055", root, start, end, False, listing.get(sym))
                 if sym != name:
                     man["symbols"][sym]["source_symbol"] = name
                 log(sym, man["symbols"][sym])
@@ -885,6 +958,403 @@ def load_option_chain(underlying: str, expiry, interval: str = "1min", start=Non
     if end is not None:
         df = df[df["ts"] < pd.Timestamp(end) + pd.Timedelta(days=1)]
     return df.reset_index(drop=True)
+
+
+# --------------------------------------------------------------------------
+# validation (research part only)
+# --------------------------------------------------------------------------
+
+BARS_PER_DAY = 375
+
+
+def bar_quality(df: pd.DataFrame, jump: float = 0.03) -> dict:
+    """Structural quality figures for one 1-min series (pure function)."""
+    if df.empty:
+        return {"rows": 0}
+    ts = df["ts"]
+    day = ts.dt.normalize()
+    tod = ts - day
+    per_day = df.groupby(day).size()
+    wk = pd.bdate_range(day.iloc[0], day.iloc[-1])
+    same_day = day.diff() == pd.Timedelta(0)
+    ret = (df["close"].astype("float64").pct_change().abs())[same_day]
+    px = df[["open", "high", "low", "close"]]
+    env = (df["open"] > df["high"]) | (df["open"] < df["low"]) | (df["close"] > df["high"]) | (df["close"] < df["low"])
+    q = {
+        "rows": int(len(df)), "first": str(ts.iloc[0]), "last": str(ts.iloc[-1]), "days": int(len(per_day)),
+        "duplicate_ts": int(ts.duplicated().sum()),
+        "strictly_increasing": bool(ts.is_monotonic_increasing and not ts.duplicated().any()),
+        "stray_seconds": int((ts.dt.second != 0).sum()),
+        "outside_session": int(((tod < SESSION_OPEN) | (tod >= SESSION_CLOSE)).sum()),
+        "bars_per_day_median": float(per_day.median()), "bars_per_day_min": int(per_day.min()),
+        "days_full_375": int((per_day == BARS_PER_DAY).sum()), "days_ge_370": int((per_day >= 370).sum()),
+        "days_lt_370": int((per_day < 370).sum()), "days_lt_300": int((per_day < 300).sum()),
+        "bar_completeness": round(float(len(df) / (len(per_day) * BARS_PER_DAY)), 5),
+        "weekdays_without_bars": int(len(wk.difference(pd.DatetimeIndex(per_day.index)))),
+        "non_weekday_sessions": [str(d.date()) for d in per_day.index if d.dayofweek >= 5],
+        "nan_or_nonpositive_price": int((px.isna().any(axis=1) | (px <= 0).any(axis=1)).sum()),
+        "high_below_low": int((df["high"] < df["low"]).sum()),
+        "open_or_close_outside_range": int(env.sum()),
+        "max_abs_1min_return": round(float(ret.max()), 5) if len(ret) else None,
+        f"bars_abs_return_gt_{jump:g}": int((ret > jump).sum()),
+        "volume_nan_share": round(float(df["volume"].isna().mean()), 4),
+        "volume_zero_share": round(float((df["volume"] == 0).mean()), 4),
+    }
+    return q
+
+
+def daily_from_bars(df: pd.DataFrame) -> pd.DataFrame:
+    """Daily open/high/low/close/volume/bars computed from intraday bars (index = date)."""
+    g = df.groupby(df["ts"].dt.normalize())
+    out = pd.DataFrame({"open": g["open"].first(), "high": g["high"].max(), "low": g["low"].min(),
+                        "close": g["close"].last(), "volume": g["volume"].sum(min_count=1), "bars": g.size()})
+    out.index.name = "date"
+    return out
+
+
+def compare_daily(intra: pd.DataFrame, official: pd.DataFrame, tol: float = 0.0005) -> dict:
+    """Compare daily OHLC derived from bars with an official daily table
+    (both indexed by date). `tol` is a relative tolerance."""
+    lo, hi = intra.index.min(), intra.index.max()
+    off = official[(official.index >= lo) & (official.index <= hi)]
+    common = intra.index.intersection(off.index)
+    out = {"official_days_in_range": int(len(off)), "intraday_days": int(len(intra)), "common_days": int(len(common)),
+           "official_days_missing_intraday": [str(d.date()) for d in off.index.difference(intra.index)],
+           "intraday_days_not_in_official": [str(d.date()) for d in intra.index.difference(off.index)]}
+    for c in ("open", "high", "low", "close"):
+        if c not in off.columns or not len(common):
+            continue
+        rel = ((intra.loc[common, c].astype("float64") - off.loc[common, c].astype("float64")).abs()
+               / off.loc[common, c].astype("float64")).dropna()
+        out[c] = {"within_tol_share": round(float((rel <= tol).mean()), 4), "median_rel_diff": float(f"{rel.median():.3g}"),
+                  "p99_rel_diff": float(f"{rel.quantile(0.99):.3g}"), "max_rel_diff": float(f"{rel.max():.3g}"),
+                  "days_beyond_1pct": [str(d.date()) for d in rel.index[rel > 0.01]][:40]}
+    out["tolerance"] = tol
+    return out
+
+
+def compare_bars(a: pd.DataFrame, b: pd.DataFrame, tol: float = 0.0005) -> dict:
+    """Bar-by-bar comparison of two series on their common timestamps."""
+    x, y = a.set_index("ts"), b.set_index("ts")
+    k = x.index.intersection(y.index)
+    if not len(k):
+        return {"common_bars": 0}
+    out = {"common_bars": int(len(k)), "only_first": int(len(x) - len(k)), "only_second": int(len(y) - len(k)),
+           "from": str(k.min()), "to": str(k.max()), "tolerance": tol}
+    for c in ("open", "high", "low", "close"):
+        d = (x.loc[k, c].astype("float64") - y.loc[k, c].astype("float64")).abs()
+        rel = d / y.loc[k, c].astype("float64")
+        out[c] = {"identical_share": round(float((d < 0.011).mean()), 4),
+                  "within_tol_share": round(float((rel <= tol).mean()), 4),
+                  "p99_rel_diff": float(f"{rel.quantile(0.99):.3g}"), "max_rel_diff": float(f"{rel.max():.3g}"),
+                  "bars_beyond_0.5pct": int((rel > 0.005).sum())}
+    return out
+
+
+# ---- official daily index values (NSE archives), used only as a yardstick ----
+
+NSE_IND_URL = "https://archives.nseindia.com/content/indices/ind_close_all_{d:%d%m%Y}.csv"
+NSE_INDEX_NAMES = {"NIFTY": {"NIFTY 50", "CNX NIFTY", "S&P CNX NIFTY"},
+                   "BANKNIFTY": {"NIFTY BANK", "CNX BANK", "BANK NIFTY"},
+                   "INDIAVIX": {"INDIA VIX"}}
+
+
+def fetch_nse_index_daily(root: Path, first, last, extra_dates: Iterable = ()) -> dict:
+    """Cache NSE's daily 'ind_close_all' files for first..last (never later).
+    Dates that return 404 (holidays, or before the archive starts) are remembered."""
+    base = raw_dir(root, "nse_ind_close")
+    base.mkdir(parents=True, exist_ok=True)
+    miss_f = base / "_missing.json"
+    missing = set(json.loads(miss_f.read_text())) if miss_f.exists() else set()
+    last = pd.Timestamp(last)
+    dates = sorted(set(pd.bdate_range(first, last)) | {pd.Timestamp(d) for d in extra_dates if pd.Timestamp(d) <= last})
+    todo = [d for d in dates if str(d.date()) not in missing and not (base / f"{d:%Y%m%d}.csv").exists()]
+    lock = threading.Lock()
+
+    def one(d):
+        r = http_get(NSE_IND_URL.format(d=d), timeout=60)
+        if r.status_code == 404:
+            with lock:
+                missing.add(str(d.date()))
+            return "missing"
+        if r.status_code != 200 or b"Index Name" not in r.content[:200]:
+            raise IOError(f"HTTP {r.status_code} for {d.date()}")
+        tmp = base / f"{d:%Y%m%d}.csv.part"
+        tmp.write_bytes(r.content)
+        os.replace(tmp, base / f"{d:%Y%m%d}.csv")
+        return "ok"
+
+    stats = {"requested": len(todo), "ok": 0, "missing": 0, "failed": 0}
+    with cf.ThreadPoolExecutor(MAX_WORKERS) as ex:
+        for i, fut in enumerate(cf.as_completed([ex.submit(one, d) for d in todo]), 1):
+            try:
+                stats[fut.result()] += 1
+            except Exception:
+                stats["failed"] += 1
+            if i % 500 == 0:
+                print(f"  [nse_ind_close] {i}/{len(todo)}", flush=True)
+    miss_f.write_text(json.dumps(sorted(missing)))
+    return stats
+
+
+def parse_nse_index_daily(text: str) -> pd.DataFrame:
+    """One ind_close_all file -> rows (name upper-cased, date, open, high, low, close)."""
+    import io
+    df = pd.read_csv(io.StringIO(text))
+    df.columns = [c.strip() for c in df.columns]
+    out = pd.DataFrame({
+        "name": df["Index Name"].astype(str).str.strip().str.upper(),
+        "date": pd.to_datetime(df["Index Date"].astype(str).str.strip(), format="%d-%m-%Y"),
+    })
+    for c, src in (("open", "Open Index Value"), ("high", "High Index Value"),
+                   ("low", "Low Index Value"), ("close", "Closing Index Value")):
+        out[c] = pd.to_numeric(df[src], errors="coerce")
+    return out
+
+
+def load_nse_index_daily(root: Path, last) -> dict[str, pd.DataFrame]:
+    base = raw_dir(root, "nse_ind_close")
+    parts = []
+    for f in sorted(base.glob("*.csv")):
+        if pd.Timestamp(f.stem) <= pd.Timestamp(last):
+            try:
+                parts.append(parse_nse_index_daily(f.read_text(errors="replace")))
+            except Exception:
+                pass
+    if not parts:
+        return {}
+    allrows = pd.concat(parts, ignore_index=True)
+    out = {}
+    for sym, names in NSE_INDEX_NAMES.items():
+        d = allrows[allrows["name"].isin(names)].drop_duplicates("date").set_index("date").sort_index()
+        out[sym] = d[["open", "high", "low", "close"]]
+    return out
+
+
+def _load_store():
+    """quant.data.store, loaded by file path so this also works under `python -I`."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_quant_store", Path(__file__).with_name("store.py"))
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["_quant_store"] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def validate(root: Path, end=None, symbols: Iterable[str] | None = None, fetch_reference: bool = True) -> dict:
+    """Quality report for the research part. Never opens the holdout files."""
+    end = pd.Timestamp(end) if end is not None else default_end(root)
+    idir = root / "intraday"
+    man = json.loads((idir / "manifest.json").read_text())
+    want = set(symbols) if symbols else None
+    rep: dict = {"end": str(end.date()), "generated_utc": pd.Timestamp.now("UTC").isoformat(),
+                 "symbols": {}, "checks": {}}
+    store = _load_store()
+    series = {}
+
+    # 1. structure of every series, and that the store loader returns it unchanged
+    for sym, meta in sorted(man["symbols"].items()):
+        f = idir / f"{sym}_1min.parquet"
+        if (want is not None and sym not in want) or not f.exists():
+            continue
+        df = pd.read_parquet(f)
+        if df["ts"].max() >= end + pd.Timedelta(days=1):
+            raise RuntimeError(f"{f} contains rows after {end.date()}")
+        kind = meta["kind"]
+        q = bar_quality(df, 0.03 if kind != "stock" and sym != "INDIAVIX" else 0.10)
+        q["kind"] = kind
+        q["columns_ok"] = list(df.columns[:6]) == COLS
+        q["dtypes_ok"] = bool(str(df["ts"].dtype).startswith("datetime64") and df["ts"].dt.tz is None
+                              and all(str(df[c].dtype) == "float32" for c in COLS[1:]))
+        loaded = store.load_intraday(sym, "1min", root=root)
+        lock = store.lock_date(root)
+        expect = df if lock is None else df[df["ts"] < lock + pd.Timedelta(days=1)]
+        q["store_loader_ok"] = bool(len(loaded) == len(expect) and list(loaded.columns) == list(df.columns))
+        rep["symbols"][sym] = q
+        if kind != "stock":
+            series[sym] = df
+
+    # 2. official daily index values
+    official = {}
+    if any(s in series for s in INDEX_PLAN):
+        if fetch_reference:
+            first = min(series[s]["ts"].iloc[0] for s in INDEX_PLAN if s in series).normalize()
+            extra = {d for s in INDEX_PLAN if s in series for d in rep["symbols"][s]["non_weekday_sessions"]}
+            rep["checks"]["nse_daily_reference_fetch"] = fetch_nse_index_daily(root, first, end, extra)
+        official = load_nse_index_daily(root, end)
+    for sym in INDEX_PLAN:
+        if sym in series and sym in official and len(official[sym]):
+            rep["checks"][f"{sym}_vs_nse_official_daily"] = compare_daily(daily_from_bars(series[sym]), official[sym])
+
+    # 3. daily index closes built by the daily-data job, if present
+    idx_f = root / "index" / "close.parquet"
+    if idx_f.exists():
+        try:
+            close = pd.read_parquet(idx_f)
+            close.index = pd.DatetimeIndex(close.index)
+            close = close.loc[:end]
+            for sym, (name, *_rest) in INDEX_PLAN.items():
+                col = next((c for c in close.columns if str(c).upper() == name), None)
+                if sym in series and col is not None:
+                    rep["checks"][f"{sym}_vs_data_index_close"] = compare_daily(
+                        daily_from_bars(series[sym])[["close", "bars"]], close[[col]].rename(columns={col: "close"}).dropna())
+        except Exception as e:
+            rep["checks"]["data_index_close"] = f"skipped: {type(e).__name__}: {e}"
+    else:
+        rep["checks"]["data_index_close"] = "skipped: data/index/close.parquet does not exist"
+
+    # 4. independent vendors and the older source, bar by bar (research rows only)
+    def research(df):
+        return normalise(split_holdout(df, end)[0])[0]
+
+    try:
+        if "NIFTY" in series:
+            fs = sorted((raw_dir(root, "gh_technovusin") / "1min").glob("*/*.csv"))
+            if fs:
+                tv = research(pd.concat([parse_technovus(f) for f in fs], ignore_index=True))
+                rep["checks"]["NIFTY_vs_technovusin"] = compare_bars(series["NIFTY"], tv)
+        for sym in ("NIFTY", "BANKNIFTY"):
+            f = raw_dir(root, "hf_thetrademarkk") / "index" / f"{sym}.parquet"
+            if sym in series and f.exists():
+                rep["checks"][f"{sym}_vs_thetrademarkk"] = compare_bars(series[sym], research(parse_trademarkk_index(f)))
+        for sym, (name, stem, *_r) in INDEX_PLAN.items():
+            if sym in series:
+                older, _ = load_aeron_symbol(root, stem, end)
+                older, _ = normalise(split_holdout(older[COLS], end)[0], MISFILED_RATIO.get(sym, 1.2))
+                first_day = pd.Timestamp(man["symbols"][sym]["segments"][1]["from"])
+                rep["checks"][f"{sym}_primary_vs_aeron7_overlap"] = compare_bars(series[sym], older[older["ts"] >= first_day])
+    except Exception as e:
+        rep["checks"]["cross_source"] = f"failed: {type(e).__name__}: {e}"
+
+    # 5. futures against spot: basis level, and where the front contract rolls
+    for fut, spot in (("NIFTY_FUT1", "NIFTY"), ("BANKNIFTY_FUT1", "BANKNIFTY"), ("NIFTY_FUT2", "NIFTY"), ("BANKNIFTY_FUT2", "BANKNIFTY")):
+        if fut in series and spot in series:
+            m = series[fut].set_index("ts")[["close"]].join(series[spot].set_index("ts")[["close"]], rsuffix="_spot", how="inner")
+            basis = (m["close"].astype("float64") / m["close_spot"].astype("float64") - 1)
+            dm = basis.groupby(basis.index.normalize()).median()
+            jump = dm.diff()
+            rolls = jump[jump > 0.0015].index
+            # the roll should be the first session after the last Thursday of a month (expiry day)
+            prev = [dm.index[dm.index.get_loc(d) - 1] for d in rolls if dm.index.get_loc(d) > 0]
+            last_week = sum(1 for d in prev if (d + pd.Timedelta(days=7)).month != d.month)
+            rep["checks"][f"{fut}_basis_vs_{spot}"] = {
+                "common_bars": int(len(m)),
+                "basis_quantiles": {str(k): round(float(v), 5) for k, v in basis.quantile([0.001, 0.01, 0.5, 0.99, 0.999]).items()},
+                "bars_abs_basis_gt_3pct": int((basis.abs() > 0.03).sum()),
+                "upward_basis_resets": int(len(rolls)),
+                "resets_right_after_last_week_of_month": int(last_week),
+                "months_covered": int(dm.index.to_period("M").nunique())}
+
+    # 6. stocks: the two mirrors against each other (ratio = later corporate actions)
+    stock_syms = [s for s, m in man["symbols"].items() if m["kind"] == "stock" and (want is None or s in want)
+                  and (idir / f"{s}_1min.parquet").exists()]
+    shards = sorted((raw_dir(root, "hf_tiru8055") / "data").glob("*.parquet"))
+    pair = {}
+    if shards and stock_syms:
+        for name, df in iter_tiru(shards):
+            sym = TIRU_ALIAS.get(name, name)
+            if sym not in stock_syms or man["symbols"][sym]["segments"][0]["source"] != "gh_akshaj23":
+                continue
+            t = research(df).set_index("ts")["close"].astype("float64")
+            a = pd.read_parquet(idir / f"{sym}_1min.parquet", columns=["ts", "close"]).set_index("ts")["close"].astype("float64")
+            k = a.index.intersection(t.index)
+            if not len(k):
+                continue
+            r = t.loc[k] / a.loc[k]
+            med = float(r.median())
+            pair[sym] = {"common_bars": int(len(k)), "price_ratio_other_over_this": round(med, 4),
+                         "share_matching_after_ratio": round(float(((r / med - 1).abs() < 2e-4).mean()), 4)}
+        rep["checks"]["stocks_akshaj23_vs_tiru8055"] = {
+            "symbols_compared": len(pair),
+            "ratio_not_1": {s: v["price_ratio_other_over_this"] for s, v in pair.items() if abs(v["price_ratio_other_over_this"] - 1) > 1e-3},
+            "min_share_matching_after_ratio": min((v["share_matching_after_ratio"] for v in pair.values()), default=None),
+            "per_symbol": pair}
+
+    # 7. daily cash-market panel, if the daily job has produced it
+    try:
+        cm_dir = root / "cm"
+        if (cm_dir / "close.parquet").exists() and stock_syms:
+            mk = store.load_market(end=end, root=root)
+            res = {}
+            for sym in stock_syms:
+                if sym not in mk.close.columns:
+                    continue
+                d = daily_from_bars(pd.read_parquet(idir / f"{sym}_1min.parquet"))
+                k = d.index.intersection(mk.high.index)
+                adj_hi, raw_hi = mk.high.loc[k, sym].astype("float64"), mk.raw("high").loc[k, sym].astype("float64")
+                ih = d.loc[k, "high"].astype("float64")
+                res[sym] = {"days": int(len(k)),
+                            "matches_adjusted_high_share": round(float(((ih / adj_hi - 1).abs() < 0.002).mean()), 4),
+                            "matches_raw_high_share": round(float(((ih / raw_hi - 1).abs() < 0.002).mean()), 4),
+                            "median_ratio_intraday_over_raw": round(float((ih / raw_hi).median()), 4),
+                            "median_volume_ratio_intraday_over_daily": round(float(
+                                (d.loc[k, "volume"].astype("float64") / mk.volume.loc[k, sym].astype("float64")).median()), 4)}
+            rep["checks"]["stocks_vs_data_cm"] = res
+        else:
+            rep["checks"]["stocks_vs_data_cm"] = "skipped: data/cm/close.parquet does not exist"
+    except Exception as e:
+        rep["checks"]["stocks_vs_data_cm"] = f"skipped: {type(e).__name__}: {e}"
+
+    # 8. option chains
+    opt = {}
+    for und in man.get("options", {}):
+        if want is not None and und not in want:
+            continue
+        spot = series.get(und)
+        spot_c = spot.set_index("ts")["close"].astype("float64") if spot is not None else None
+        tot = {"expiry_files": 0, "rows": 0, "duplicate_keys": 0, "outside_session": 0, "after_expiry": 0,
+               "parity_checked_bars": 0}
+        fwd_err = []
+        for f in sorted((idir / "options" / f"{und}_1min").glob("*.parquet")):
+            o = pd.read_parquet(f)
+            if o["ts"].max() >= end + pd.Timedelta(days=1):
+                raise RuntimeError(f"{f} contains rows after {end.date()}")
+            tod = o["ts"] - o["ts"].dt.normalize()
+            tot["expiry_files"] += 1
+            tot["rows"] += len(o)
+            tot["duplicate_keys"] += int(o.duplicated(["ts", "strike", "right"]).sum())
+            tot["outside_session"] += int(((tod < SESSION_OPEN) | (tod >= SESSION_CLOSE)).sum())
+            tot["after_expiry"] += int((o["ts"].dt.normalize() > o["expiry"]).sum())
+            if spot_c is not None:                     # put-call parity: C - P + K should sit near spot
+                c = o[o["right"] == "CE"].set_index(["ts", "strike"])["close"]
+                p = o[o["right"] == "PE"].set_index(["ts", "strike"])["close"]
+                both = pd.concat([c.rename("c"), p.rename("p")], axis=1, join="inner").reset_index()
+                both["spot"] = spot_c.reindex(both["ts"]).to_numpy()
+                both = both.dropna()
+                both = both[(both["strike"] / both["spot"] - 1).abs() < 0.01]
+                if len(both):
+                    fwd_err.append(((both["c"] - both["p"] + both["strike"]) / both["spot"] - 1).astype("float64"))
+        if fwd_err:
+            e = pd.concat(fwd_err)
+            tot["parity_checked_bars"] = int(len(e))
+            tot["synthetic_forward_over_spot_minus_1"] = {str(k): round(float(v), 5) for k, v in e.quantile([0.01, 0.5, 0.99]).items()}
+            tot["parity_abs_error_gt_1pct_share"] = round(float((e.abs() > 0.01).mean()), 5)
+        opt[und] = tot
+    rep["checks"]["options"] = opt
+
+    (idir / "quality.json").write_text(json.dumps(rep, indent=1))
+    _print_report(rep)
+    return rep
+
+
+def _print_report(rep: dict) -> None:
+    syms = rep["symbols"]
+    print(f"\nquality report (research rows up to {rep['end']}), {len(syms)} series")
+    print(f"{'symbol':16s}{'rows':>9s} {'first':10s} {'last':10s}{'days':>6s}{'full%':>7s}{'<370':>6s}{'compl':>7s}{'env':>6s}{'jumps':>6s} ok")
+    for s, q in syms.items():
+        if not q.get("rows"):
+            continue
+        jumps = next(v for k, v in q.items() if k.startswith("bars_abs_return_gt_"))
+        ok = (q["strictly_increasing"] and q["duplicate_ts"] == 0 and q["outside_session"] == 0 and q["stray_seconds"] == 0
+              and q["nan_or_nonpositive_price"] == 0 and q["high_below_low"] == 0 and q["columns_ok"] and q["dtypes_ok"]
+              and q["store_loader_ok"])
+        print(f"{s:16s}{q['rows']:9d} {q['first'][:10]} {q['last'][:10]}{q['days']:6d}{100 * q['days_full_375'] / q['days']:7.1f}"
+              f"{q['days_lt_370']:6d}{q['bar_completeness']:7.3f}{q['open_or_close_outside_range']:6d}{jumps:6d} {'yes' if ok else 'NO'}")
+    for k, v in rep["checks"].items():
+        if isinstance(v, dict) and "per_symbol" in v:
+            v = {a: b for a, b in v.items() if a != "per_symbol"}
+        txt = json.dumps(v)
+        print(f"- {k}: {txt[:900]}{' ...' if len(txt) > 900 else ''}")
 
 
 # --------------------------------------------------------------------------

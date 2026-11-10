@@ -1,0 +1,81 @@
+[
+  {
+    "id": "methodology__benchmark_buy_hold_nifty50",
+    "name": "Buy and hold Nifty 50 (null benchmark)",
+    "family": "benchmark",
+    "rule": "At the first session open, buy a Nifty 50 ETF with all capital. Never sell. Each month reinvest any cash balance or dividends at the next open. No signal, stop or leverage. Report net CAGR, annualised Sharpe and maximum drawdown on the same dates as every candidate strategy; reject a candidate unless it beats this benchmark net of costs. Use Nifty 50 TRI as the gross series.",
+    "params": {
+      "allocation": 1.0,
+      "reinvest_frequency": "monthly",
+      "rebalance": "none"
+    },
+    "instruments": "Nifty 50 ETF or index fund (NSE cash segment); Nifty 50 TRI as gross proxy",
+    "holding_period": "multi-year",
+    "data_needed": ["daily_index", "daily_equity"],
+    "evidence": "strong_academic",
+    "india_evidence": true,
+    "reported_performance": "Nifty 50 TRI 12.15% CAGR from base date 3 Nov 1995 to 30 Oct 2026; 6.70% CAGR over 5 years; -9.45% over 1 year; price index 10.65% and 5.46%; annualised daily volatility 22.38% since inception and 13.88% over 5 years (NSE Indices factsheet, 30 Oct 2026)",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "One delivery buy ticket costs about 0.13% on Rs 1.5 lakh at Angel One rates; ETF units cost a few hundred rupees; no margin, lot size or short selling involved.",
+    "sources": [
+      "https://www.niftyindices.com/Factsheet/ind_nifty50.pdf",
+      "https://www.angelone.in/exchange-transaction-charges"
+    ]
+  },
+  {
+    "id": "methodology__benchmark_nifty50_equal_weight",
+    "name": "Equal-weight Nifty 50 (naive diversification benchmark)",
+    "family": "benchmark",
+    "rule": "Hold all 50 Nifty 50 constituents at 2% each. Reset to equal weight on the last trading day of March, June, September and December using closing prices three trading days earlier. Change names only when Nifty 50 changes (semi-annual review effective end of March and September, plus ad hoc replacements). No signal or stop. Use as the hurdle for any stock-selection rule on large caps.",
+    "params": {
+      "n_positions": 50,
+      "weight_each": 0.02,
+      "rebalance_months": [3, 6, 9, 12],
+      "weight_price_lag_days": 3
+    },
+    "instruments": "NSE cash equities (Nifty 50 constituents) or an equal-weight Nifty 50 index fund or ETF",
+    "holding_period": "quarterly rebalance, names held for years",
+    "data_needed": ["daily_equity", "daily_index", "other"],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Nifty50 Equal Weight TRI 13.73% CAGR from base date 3 Nov 1995 to 30 Oct 2026 vs 12.15% for Nifty 50 TRI; 10.94% vs 6.70% over 5 years; -4.15% vs -9.45% over 1 year; volatility 21.86% since inception. Index launched 13 Apr 2017, earlier history back-filled; no costs in index returns",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Fifty positions of about Rs 3,000 cost roughly 1.4% per delivery round trip at Angel One (Rs 5 minimum brokerage per side plus Rs 23.60 DP charge per sell); feasible through an equal-weight index fund, and useful mainly as a hurdle.",
+    "sources": [
+      "https://www.niftyindices.com/Methodology/Method_NIFTY_Equity_Indices.pdf",
+      "https://www.niftyindices.com/Factsheet/Factsheet_Nifty50_Equal_Weight.pdf",
+      "https://www.angelone.in/exchange-transaction-charges"
+    ]
+  },
+  {
+    "id": "methodology__nifty200_momentum30_replication",
+    "name": "Nifty200 Momentum 30 replication (published rule with live record)",
+    "family": "momentum_benchmark",
+    "rule": "Universe: Nifty 200 members in F&O, listed at least 1 year. MR12=(P[M-1]/P[M-13]-1)/sigma, MR6=(P[M-1]/P[M-7]-1)/sigma; sigma=annualised std of daily log returns over 1 year. Z-score each cross-sectionally; Z=0.5*Z12+0.5*Z6; score=1+Z if Z>=0 else 1/(1-Z). Hold top 30; top 15 always included, holders dropped only if rank>45. Weight proportional to free-float mcap*score, capped at min(5%, 5x free-float weight). Rebalance June and December.",
+    "params": {
+      "universe": "Nifty 200",
+      "n_positions": 30,
+      "lookback_months": [6, 12],
+      "z_weights": [0.5, 0.5],
+      "vol_window_days": 252,
+      "buffer_always_in_rank": 15,
+      "buffer_drop_rank": 45,
+      "weight_cap": 0.05,
+      "weight_cap_multiple_of_ff_weight": 5,
+      "rebalance_months": [6, 12]
+    },
+    "instruments": "NSE cash equities (Nifty 200 constituents) or a Nifty200 Momentum 30 index fund or ETF",
+    "holding_period": "6 months between rebalances",
+    "data_needed": ["daily_equity", "daily_index", "other"],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "Index TRI 18.05% CAGR from base date 1 Apr 2005 to 30 Oct 2026, but only 7.93% over the last 5 years vs 6.70% for Nifty 50 TRI; -8.48% over 1 year; price return 16.79% / 6.97% / -9.15%; volatility 22.31% since inception. Index launched 25 Aug 2020, so pre-2020 history is back-filled; no costs in index returns",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Thirty positions of about Rs 5,000 cost roughly 0.93% per delivery round trip at Angel One and cannot hold intended weights in high-priced shares; gains within a year are taxed at 20%. Feasible through an index fund or ETF; a concentrated 10-stock variant would be a different, untested rule.",
+    "sources": [
+      "https://www.niftyindices.com/Methodology/Method_NIFTY_Equity_Indices.pdf",
+      "https://www.niftyindices.com/Factsheet/Factsheet_Nifty200_Momentum30.pdf",
+      "https://www.angelone.in/exchange-transaction-charges"
+    ]
+  }
+]

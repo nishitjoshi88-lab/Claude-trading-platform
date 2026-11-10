@@ -71,7 +71,7 @@ Value Research, 29 Jan 2025: ₹1 lakh in a Nifty 200 Momentum 30 fund lost abou
 
 Published on the library page: annualised geometric mean since 1 January 1994: market premium 4.93%, SMB -3.71%, HML 6.61%, WML (winners minus losers) 10.65%. WML for calendar 2025: about -5.3% to -5.5%.
 
-The original working paper (Agarwalla, Jacob, Varma 2013) reported an average annual momentum-factor return of 21.9% for 1994 to 2014 (legacy series, arithmetic average of yearly returns). The current library excludes micro-caps and penny stocks and covers NSE and BSE.
+The original working paper (Agarwalla, Jacob, Varma 2013) reported an "average annual return of the momentum factor" of 21.9% for January 1994 to December 2014 (legacy series; the revised abstract's wording, and the original version said 21.2%). That is about twice the 10.65% geometric figure the current library shows, so do not use 21.9% as an expectation. The current library excludes micro-caps and penny stocks and covers NSE and BSE.
 
 My own computation from the monthly CSV files (gross, no costs; "WB" is the winner portfolio among big stocks, "WS" among small stocks, as defined by IIMA; market = MF + RF):
 
@@ -115,6 +115,9 @@ Other small-account constraints:
 - `MOM(J,S)` at `T` = `P[T - 21*S] / P[T - 21*J] - 1` using 21 trading days per month (or month-end closes). "12-1" is `MOM(12,1)`, "6-1" is `MOM(6,1)`, "12-0" is the plain 12-month return.
 - `VOL1Y` = standard deviation of daily log returns over the last 252 trading days x sqrt(252).
 - Universe filters that sources leave vague are stated as "our default" and are not from the source.
+- Several cards in `research/cards/xs_momentum.json` add "replace a holding only when it ranks beyond 2N" (or a stated exit rank). That exit buffer is our default taken from S24, not from the cited paper, whose portfolios are fully re-formed at each rebalance.
+
+Card ids map to the sections below as follows: S1 `total_return_topn`, S2 `nifty200_momentum30_replica`, S3 `nifty500_momentum50_replica`, S4 `midcap150_momentum50_replica`, S5 `nifty_alpha50_replica`, S6 `nifty200_alpha30_replica`, S7 `momentum_etf_core`, S8 `msci_conditional_rebalance`, S9 `fifty_two_week_high`, S10 `industry_52w_high_band`, S11 `ath_weekly_cash`, S12 `residual_momentum`, S13 `sharpe_ratio_momentum`, S14 `smooth_path_fip`, S15 `clenow_adjusted_slope`, S16 `vol_target_overlay`, S17 `bear_state_overlay`, S18 `index_trend_cash_switch`, S19 `alpha_low_vol30_replica`, S20 `conservative_formula`, S21 `momentum_quality50_replica`, S22 `intermediate_12_7`, S23 `industry_momentum`, S24 `buffered_rank_hold`, S25 `low_scaled_turnover_annual`, S26 `next50_top10_rotation`, S27 `acceleration` (all prefixed `xs_momentum__`).
 
 ## 3. Strategies
 
@@ -227,7 +230,7 @@ Other small-account constraints:
 ### S9. 52-week-high momentum (George and Hwang)
 
 - **Rules.** At each month-end compute `PTH = P[T] / max(P over the past 12 months)`. Rank the universe. Long the 30% of stocks with the highest ratio, short the 30% with the lowest, equal weight, hold 6 months with overlapping monthly cohorts (the paper skips a month between ranking and holding in its regressions).
-- **Retail default.** Long only: top N = 15 by PTH within a liquid universe, monthly, ties broken by `MOM(12,1)` (tie-break is our default).
+- **Retail default.** Long only: top N = 15 by PTH within a liquid universe, monthly, ties broken by `MOM(12,1)`, holdings replaced only when they fall out of the top 2N (tie-break and exit buffer are our defaults).
 - **Reported performance.** US, CRSP, July 1963 to December 2001, (6,6) strategies: winner minus loser 0.45% a month for the 52-week-high strategy against 0.48% for Jegadeesh-Titman and 0.45% for industry momentum; excluding January 1.23% vs 1.07% and 0.50%. In pairwise tests the 52-week-high measure dominates: 0.65% a month vs 0.38% for JT in raw returns, 0.86% vs 0.38% risk-adjusted. Returns do not reverse in the long run.
 - **India evidence.** Raju (SSRN 4587697, 2023): data October 2004 to August 2023; the document description states stocks near the 52-week high had higher returns and risk-adjusted returns than momentum, more stable alpha and weaker long-term reversal (unverified: snippet only; SSRN blocked, only the Scribd description opened). A 2006 to 2010 student study of 25 high and 25 low stocks was mixed (unverified: snippet only).
 - **Costs and capacity.** PTH is bounded at 1, so many stocks tie near the top in strong markets and ranks change little from month to month; turnover should be lower than S1 (not measured in a source I opened).
@@ -298,7 +301,7 @@ Other small-account constraints:
 ### S16. Constant-volatility scaling of momentum exposure (Barroso and Santa-Clara)
 
 - **Rules (paper, via summaries).** Estimate the momentum portfolio's own realised volatility from its recent daily returns (prior six months in the paper; (unverified: snippet only) for the window) and scale exposure by `target / realised`, with a 12% annual target.
-- **Long-only retail form.** Each month compute the realised volatility of the momentum portfolio's daily returns over the last 126 trading days; invest fraction `w = min(1, target / realised)` in the stock portfolio and the rest in a liquid fund ETF. Target is a parameter (12% in the paper for a long-short book; a long-only Indian portfolio runs near 20 to 25%, so a target of 15 to 18% is a sensible starting range; that range is ours).
+- **Long-only retail form.** Each month compute the realised volatility of the momentum portfolio's daily returns over the last 126 trading days; invest fraction `w = min(1, target / realised)` in the stock portfolio and the rest in a liquid fund ETF. Target is a parameter (12% in the paper for a long-short book; a long-only Indian portfolio runs near 20 to 25%, so a target of 15 to 18% is a sensible starting range; that range is ours). To avoid small costly adjustments the card changes the fraction only when it moves by more than 10 percentage points (also ours).
 - **Reported performance.** Barroso and Santa-Clara: managing this risk "virtually eliminates crashes and nearly doubles the Sharpe ratio" (quoted by Quantpedia and Alpha Architect). Dierkes and Krupski: worst month of unmanaged US momentum about -77%, about -28% with constant volatility scaling.
 - **India evidence.** Singh, Walia, Panda and Gupta (FIIB Business Review 2022), 450 BSE stocks: a risk-managed approach "doubles the adjusted Sharpe ratio" and improves downside risk (abstract). My computation on the IIMA long-short WML factor, June 1994 to December 2025, 12% target, 126-day window, gross: ratio of mean to volatility 0.56 unscaled, 0.89 scaled, 0.83 with weight capped at 1; worst month -27.6% unscaled, -13.2% scaled; max drawdown -53% vs -28%. For 2015 to 2025 the gain is small (0.91 to 1.06).
 - **Caveats.** Bianchi, De Polis and Petrella argue volatility scaling understates risk when returns are skewed (unverified: snippet only). The published evidence is for long-short momentum; for long-only the scaling mostly responds to market volatility.
@@ -311,7 +314,7 @@ Other small-account constraints:
 - **Long-only retail form (ours).** If IB = 1 and the last month's index return is positive, replace the momentum stock portfolio with the broad index ETF (or halve it) until IB = 0; otherwise run the momentum portfolio.
 - **Reported performance.** Daniel and Moskowitz: the dynamic strategy roughly doubles the alpha and Sharpe ratio of static US momentum and reaches Sharpe 1.18 across markets and asset classes. Dierkes and Krupski (via Alpha Architect): average return -3.63% in indicated crash months vs +1.49% otherwise; Sharpe 1.12 for the crash-indicator strategy vs 0.94 constant-volatility and 1.03 dynamic.
 - **India evidence.** My computation on the IIMA WML factor, December 1995 to December 2025: mean 1.40% a month when the prior 24-month market return was non-negative (267 months), 0.75% in bear states (94 months); within bear states, -3.09% a month when the market rose that month (50 months) and +5.11% when it fell (44 months). The split on same-month market direction is not tradable in advance; it shows the mechanism.
-- **Important limit.** Daniel and Moskowitz find the asymmetry is "driven by the past losers", so long-only portfolios "are not subject to such deep crashes" (Alpha Architect summary). The Indian data agree: in April and May 2009 large-cap winners rose 10.6% and 21.9%. For a long-only account this overlay addresses relative underperformance in rebounds, not absolute loss.
+- **Important limit.** Daniel and Moskowitz find that most of the up-versus-down beta asymmetry in bear markets "is driven by the past losers"; Alpha Architect's summary draws the conclusion that long-only momentum is not subject to such deep crashes. The Indian data agree: in April and May 2009 large-cap winners rose 10.6% and 21.9%. For a long-only account this overlay addresses relative underperformance in rebounds, not absolute loss.
 - **Feasibility at ₹1.5 lakh.** Yes: a rare switch between a stock basket and an index ETF.
 - **Sources.** nber.org/system/files/working_papers/w20439/w20439.pdf; alphaarchitect.com/avoiding-momentum-crashes/; IIMA data library.
 
@@ -424,6 +427,12 @@ Other small-account constraints:
 - **Circuit filters.** NSE excludes non-F&O stocks that hit a circuit on 20% or more of days in six months. A backtest that buys at the close of an upper-circuit day assumes a fill that was not available.
 - **Do not re-weight.** See section 1.4.
 - **Tax lots.** Realised short-term gains are taxed at 20%; realised short-term losses offset them. Selling losers before year-end and letting winners pass 12 months is a legitimate rule variant to test.
+
+### Data needs beyond daily prices
+
+- Daily adjusted OHLCV for stocks, ETFs and indices is enough for: S1, S7, S8, S9, S10 (band form), S12 (market-model form), S13, S14, S15, S16, S17, S18, S22, S23 (sector indices), S24, S27.
+- These also need point-in-time index membership for a faithful test, but can be approximated with a universe ranked by traded value and with equal weights instead of free-float tilt weights: S2, S4, S5, S6, S19, S26. S11 needs a market-cap floor, which a traded-value floor can stand in for.
+- These need data that prices cannot supply: S3 (promoter pledge, free-float market cap for the turnover ratio), S20 (payout or dividend yield), S21 (ROE, debt to equity, EPS history), S25 (market capitalisation and PE history). S12 in its three-factor form needs the IIMA factor file, which is public.
 
 ## Negative or cautionary evidence
 

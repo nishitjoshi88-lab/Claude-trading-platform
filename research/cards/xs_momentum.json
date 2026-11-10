@@ -1,0 +1,913 @@
+[
+  {
+    "id": "xs_momentum__total_return_topn",
+    "name": "Total-return momentum top-N (12-1 / 6-1, Jegadeesh-Titman)",
+    "family": "price_momentum",
+    "rule": "Universe: Nifty 200 members, 252+ days history, median daily traded value >= Rs 5 crore. At month-end close compute MOM = P[T-21*skip]/P[T-21*J]-1 (default J=12, skip=1; test J=6). Rank descending. Hold top N equal weight. Next session sell holdings that left the top N, buy replacements with the freed cash; never re-weight survivors. No stop loss.",
+    "params": {
+      "lookback_months": 12,
+      "skip_months": 1,
+      "n_positions": 15,
+      "rebalance": "monthly",
+      "weighting": "equal",
+      "universe": "NIFTY200",
+      "min_median_traded_value_cr": 5,
+      "lookback_range_months": [
+        3,
+        6,
+        9,
+        12
+      ],
+      "skip_range_months": [
+        0,
+        1
+      ]
+    },
+    "instruments": "NSE cash equities, delivery, long only",
+    "holding_period": "1-12 months per stock, typically 2-3 months",
+    "data_needed": [
+      "daily_equity",
+      "other"
+    ],
+    "evidence": "strong_academic",
+    "india_evidence": true,
+    "reported_performance": "US NYSE/AMEX 1965-1989 (Jegadeesh-Titman): 12/3 long-short 1.31%/month, 6/6 12.01%/yr, 9.29%/yr after 0.5% one-way cost. US UMD gross 8.3%/yr 1927-2013 but 6.3%/yr 1991-2013. India: IIMA WML 10.65%/yr geometric 1994-2025; Capitalmind top-30 monthly 12.6% CAGR vs Nifty 8.9%, Jan 2007-2019, no costs or taxes.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Long-only 10-15 liquid stocks of Rs 10-15k each; Angel One round trip about 0.6-0.7% (1.05% if BSDA DP charge applies). Turnover (Capitalmind's live estimate: about 20% of the portfolio a month) and 20% STCG are the drag. Long-short form impossible without overnight shorting.",
+    "sources": [
+      "https://www.bauer.uh.edu/rsusmel/phd/jegadeesh-titman93.pdf",
+      "https://zerodha.com/varsity/chapter/momentum-portfolios/",
+      "https://www.capitalmind.in/insights/momentum-investing-basics-india",
+      "https://quantpedia.com/strategies/momentum-factor-effect-in-stocks",
+      "https://www.nber.org/system/files/working_papers/w20439/w20439.pdf",
+      "https://faculty.iima.ac.in/~iffm/Indian-Fama-French-Momentum/",
+      "https://ideas.repec.org/p/iim/iimawp/12130.html",
+      "https://nsearchives.nseindia.com/content/research/res_paperfinal223.pdf",
+      "https://www.publishingindia.com/storage/PDFBrochures/2192.pdf",
+      "https://publishingindia.com/storage/PDFBrochures/3029.pdf"
+    ]
+  },
+  {
+    "id": "xs_momentum__nifty200_momentum30_replica",
+    "name": "Nifty200 Momentum 30 replica (volatility-adjusted 6m+12m z-score)",
+    "family": "index_replica",
+    "rule": "Universe: Nifty 200 stocks in F&O, 1 year listed. MR12=(P[M-1]/P[M-13]-1)/VOL1Y, MR6=(P[M-1]/P[M-7]-1)/VOL1Y on month-end prices; z-score each; WZ=0.5*Z12+0.5*Z6; NMS=1+WZ if WZ>=0 else 1/(1-WZ). June and December, on May/November-end data: add ranks 1-15, keep holdings ranked <=45, fill to 30 by rank. Weight = free-float mcap x NMS, capped at min(5%, 5x float weight).",
+    "params": {
+      "n_positions": 30,
+      "compulsory_entry_rank": 15,
+      "exit_rank": 45,
+      "vol_window_days": 252,
+      "weight_6m": 0.5,
+      "weight_12m": 0.5,
+      "rebalance_months": [
+        6,
+        12
+      ],
+      "data_cutoff": "last trading day of May and November",
+      "weight_cap": 0.05,
+      "retail_variant_n": 15
+    },
+    "instruments": "Nifty 200 F&O stocks, delivery, long only",
+    "holding_period": "6 months or longer per stock",
+    "data_needed": [
+      "daily_equity",
+      "other"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "TR Apr 2005-27 Feb 2026: 19.19%/yr vs Nifty 200 15.08%; max drawdown -67.7% (Oct 2008); beat parent in 15 of 20 calendar years. 5 years to 30 Oct 2026: 7.93% vs 8.26%. 2025: -4.57% (14.13 pts behind parent). Launched 25 Aug 2020; earlier history back-calculated. Annual churn 101-134% (FY22-FY26).",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Faithful 30-stock tilt-weighted replica means Rs 5,000 average positions, 0.9-1.6% round trip and whole-share rounding errors. An equal-weight top-15 variant is workable; the ETF route is cheaper.",
+    "sources": [
+      "https://www.niftyindices.com/Methodology/Method_NIFTY_Equity_Indices.pdf",
+      "https://www.niftyindices.com/docs/default-source/indices/nifty200-momentum-30/momentum-strategy-whitepaper_2026.pdf",
+      "https://www.niftyindices.com/docs/default-source/indices/nifty200-momentum-30/nifty200_momentum_30_index_whitepaper_sep_20.pdf",
+      "https://www.niftyindices.com/Factsheet/Factsheet_Nifty200_Momentum30.pdf",
+      "https://www.niftyindices.com/Factsheet/ind_nifty_200.pdf",
+      "https://www.business-standard.com/amp/markets/news/nifty200-momentum30-a-flip-of-index-switch-jolts-16k-cr-across-the-grid-125121400388_1.html",
+      "https://backtestindia.com/blog/momentum-factor-india-liquidity-premium-scaled-turnover"
+    ]
+  },
+  {
+    "id": "xs_momentum__nifty500_momentum50_replica",
+    "name": "Nifty500 Momentum 50 replica",
+    "family": "index_replica",
+    "rule": "Universe: Nifty 500, 1 year listed; drop non-F&O stocks hitting a circuit on >=20% of days in 6 months, promoter pledge >20%, bottom 10% by 6-month average turnover, bottom 10% by turnover/free-float-mcap. Score NMS as in Nifty200 Momentum 30. June and December: holdings ranked <=75 stay, non-members ranked <=25 enter replacing lowest scores, ranks >75 exit; 50 names. Weight = free-float mcap x NMS, capped min(5%, 5x float weight).",
+    "params": {
+      "n_positions": 50,
+      "compulsory_entry_rank": 25,
+      "exit_rank": 75,
+      "circuit_days_fraction_max": 0.2,
+      "pledge_max": 0.2,
+      "turnover_bottom_pct_excluded": 10,
+      "rebalance_months": [
+        6,
+        12
+      ],
+      "weight_cap": 0.05
+    },
+    "instruments": "Nifty 500 stocks, delivery, long only; or index fund/ETF",
+    "holding_period": "6 months or longer per stock",
+    "data_needed": [
+      "daily_equity",
+      "fundamentals",
+      "other"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "TR Apr 2005-30 Oct 2026: 21.12%/yr; 5 years to 30 Oct 2026: 10.71% vs Nifty 500 8.81%; max drawdown -70.2% (Oct 2008); 2025: -7.61% (15.37 pts behind parent). Launched 4 Jun 2024; earlier history back-calculated. Annual churn 124-145%.",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "50 names at Rs 3,000 each is uneconomic (DP and minimum brokerage dominate) and many members are mid/small caps with wider spreads. Hold through an index fund or ETF instead.",
+    "sources": [
+      "https://www.niftyindices.com/Methodology/Method_NIFTY_Equity_Indices.pdf",
+      "https://www.niftyindices.com/docs/default-source/indices/nifty200-momentum-30/momentum-strategy-whitepaper_2026.pdf",
+      "https://www.niftyindices.com/Factsheet/FactsheetNifty500Momentum50.pdf",
+      "https://www.niftyindices.com/Factsheet/ind_nifty_500.pdf"
+    ]
+  },
+  {
+    "id": "xs_momentum__midcap150_momentum50_replica",
+    "name": "Nifty Midcap150 Momentum 50 replica",
+    "family": "index_replica",
+    "rule": "Universe: Nifty Midcap 150, 1 year listed; drop non-F&O stocks hitting a circuit on >=20% of trading days in the past 6 months. Score NMS as in Nifty200 Momentum 30 (0.5*Z of 6m and 12m return over 1-year volatility). June and December on May/November-end data: holdings ranked <=75 stay, non-members ranked <=25 enter, ranks >75 exit; 50 names. Weight = free-float mcap x NMS, capped min(5%, 5x float weight).",
+    "params": {
+      "n_positions": 50,
+      "compulsory_entry_rank": 25,
+      "exit_rank": 75,
+      "circuit_days_fraction_max": 0.2,
+      "rebalance_months": [
+        6,
+        12
+      ],
+      "weight_cap": 0.05
+    },
+    "instruments": "Nifty Midcap 150 stocks, delivery, long only; or index fund/ETF",
+    "holding_period": "6 months or longer per stock",
+    "data_needed": [
+      "daily_equity",
+      "other"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "TR Apr 2005-30 Oct 2026: 22.01%/yr vs Nifty Midcap 150 16.47%; 5 years to 30 Oct 2026: 14.33% vs 13.84%; max drawdown -72.5% (Mar 2009). Launched 16 Aug 2022; earlier history back-calculated. Annual churn 90-103%.",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "50 mid-cap names cannot be held sensibly with Rs 1.5 lakh. Index funds exist; the one ETF had only Rs 27 crore AUM in Feb 2026.",
+    "sources": [
+      "https://www.niftyindices.com/Methodology/Method_NIFTY_Equity_Indices.pdf",
+      "https://www.niftyindices.com/docs/default-source/indices/nifty200-momentum-30/momentum-strategy-whitepaper_2026.pdf",
+      "https://niftyindices.com/docs/default-source/indices/nifty-midcap150-momentum-50/nifty-midcap150-momentum-50-whitepaper_2023.pdf",
+      "https://www.niftyindices.com/Factsheet/Factsheet_NiftyMidcap150Momentum50.pdf",
+      "https://www.niftyindices.com/Factsheet/ind_Nifty_Midcap_150.pdf"
+    ]
+  },
+  {
+    "id": "xs_momentum__nifty_alpha50_replica",
+    "name": "Nifty Alpha 50 replica (1-year Jensen's alpha, quarterly)",
+    "family": "index_replica",
+    "rule": "Universe: NSE stocks in the top 300 by both 6-month average free-float mcap and daily turnover, 1 year listed, traded every day. alpha = mean daily stock return - [rf + beta*(mean daily Nifty 50 return - rf)] over 12 months, rf = 3-month MIBOR. Quarterly on data to end Feb/May/Aug/Nov: top 50 by alpha, positive alpha only; holdings ranked <=100 are retained. Weight proportional to alpha.",
+    "params": {
+      "n_positions": 50,
+      "retain_rank": 100,
+      "alpha_window_days": 252,
+      "market_index": "NIFTY50",
+      "rebalance_months": [
+        3,
+        6,
+        9,
+        12
+      ],
+      "weighting": "proportional_to_alpha",
+      "retail_variant_n": 15
+    },
+    "instruments": "NSE top-300 stocks, delivery, long only; or ETF",
+    "holding_period": "3 months or longer per stock",
+    "data_needed": [
+      "daily_equity",
+      "daily_index",
+      "other"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "TR 31 Dec 2003-30 Oct 2026: 19.98%/yr; 5 years to 30 Oct 2026: 11.56% vs Nifty 500 8.81%; 1 year +3.66% vs Nifty 50 -9.45%. Launched 19 Nov 2012. Since-inception volatility about 24.7% vs 22.4% for Nifty 50 (factsheet reading).",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "50 alpha-weighted names is not practical; a top-10 to 15 equal-weight variant is affordable but concentrates in volatile small caps (largest index weight 7.88% in one small cap on 30 Oct 2026). Quarterly turnover raises costs.",
+    "sources": [
+      "https://www.niftyindices.com/Methodology/Method_Nifty_Alpha_50.pdf",
+      "https://www.niftyindices.com/Methodology/Method_NIFTY_Equity_Indices.pdf",
+      "https://www.niftyindices.com/Factsheet/Factsheet_Nifty_Alpha50.pdf",
+      "https://www.niftyindices.com/Factsheet/ind_nifty_500.pdf",
+      "https://www.niftyindices.com/Factsheet/ind_nifty50.pdf"
+    ]
+  },
+  {
+    "id": "xs_momentum__nifty200_alpha30_replica",
+    "name": "Nifty200 Alpha 30 replica",
+    "family": "index_replica",
+    "rule": "Universe: Nifty 200 stocks in F&O, 1 year listed. Jensen's alpha on 1-year daily prices versus Nifty 50; positive alpha only. Quarterly (March, June, September, December) on data to the previous month-end: holdings ranked beyond 45 exit, non-members ranked in the top 15 enter replacing lowest alpha, 30 names. Alpha score = 1+Z if Z>0 else 1/(1-Z); weight by score, capped min(5%, 5x free-float weight).",
+    "params": {
+      "n_positions": 30,
+      "compulsory_entry_rank": 15,
+      "exit_rank": 45,
+      "alpha_window_days": 252,
+      "market_index": "NIFTY50",
+      "rebalance_months": [
+        3,
+        6,
+        9,
+        12
+      ],
+      "weight_cap": 0.05,
+      "retail_variant_n": 15
+    },
+    "instruments": "Nifty 200 F&O stocks, delivery, long only",
+    "holding_period": "3 months or longer per stock",
+    "data_needed": [
+      "daily_equity",
+      "daily_index",
+      "other"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "TR Apr 2005-30 Oct 2026: 17.27%/yr; 5 years to 30 Oct 2026: 13.04% vs Nifty 200 8.26%; 1 year -1.66% vs -7.35%. Launched 21 Jul 2022; earlier history back-calculated.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "30 names is too many at this size; an equal-weight top-15 of liquid F&O stocks at Rs 10,000 each is workable, with quarterly changes buffered by the 15/45 rank rule.",
+    "sources": [
+      "https://www.niftyindices.com/Methodology/Method_NIFTY_Equity_Indices.pdf",
+      "https://www.niftyindices.com/Factsheet/Factsheet_Nifty200Alpha30.pdf",
+      "https://www.niftyindices.com/Factsheet/ind_nifty_200.pdf"
+    ]
+  },
+  {
+    "id": "xs_momentum__momentum_etf_core",
+    "name": "Momentum index ETF as the whole position",
+    "family": "etf_buy_and_hold",
+    "rule": "Buy one ETF tracking Nifty200 Momentum 30 (for example MOM30IETF or MOMOMENTUM) or Nifty500 Momentum 50 with the full allocation using limit orders near indicative NAV. Hold; add new cash monthly; no stock selection and no exits. Optional overlay: see index_trend_cash_switch.",
+    "params": {
+      "etf": "MOM30IETF",
+      "allocation": 1.0,
+      "topup": "monthly",
+      "order_type": "limit"
+    },
+    "instruments": "NSE-listed momentum index ETFs",
+    "holding_period": "years",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Tracks the index less costs: Nifty200 Momentum 30 TR 19.19%/yr Apr 2005-Feb 2026 (back-calculated before Aug 2020), 7.93%/yr for 5 years to 30 Oct 2026 vs Nifty 200 8.26%. ETF tracking error about 0.2-0.5% (NSE whitepaper, Feb 2026). A fund tracking it lost about 21% in Oct 2024-Jan 2025 vs 12.6% for Nifty 200.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "One position: about 0.27% round trip on Rs 1.5 lakh, units cost Rs 31-61, no internal capital-gains tax on index rebalancing. Cheapest way to hold 30-50 momentum stocks at this size; check spreads on the smaller ETFs.",
+    "sources": [
+      "https://www.niftyindices.com/docs/default-source/indices/nifty200-momentum-30/momentum-strategy-whitepaper_2026.pdf",
+      "https://www.niftyindices.com/Factsheet/Factsheet_Nifty200_Momentum30.pdf",
+      "https://www.tickertape.in/etfs/icici-prudential-nifty-200-momentum-30-etf-ICICM",
+      "https://www.tickertape.in/etfs/motilal-oswal-nifty-200-momentum-30-etf-MOMO",
+      "https://www.valueresearchonline.com/stories/222938/momentum-funds-performance-12-months/",
+      "https://www.business-standard.com/amp/markets/news/nifty200-momentum30-a-flip-of-index-switch-jolts-16k-cr-across-the-grid-125121400388_1.html",
+      "https://www.angelone.in/exchange-transaction-charges"
+    ]
+  },
+  {
+    "id": "xs_momentum__msci_conditional_rebalance",
+    "name": "MSCI-style risk-adjusted momentum with volatility-triggered rebalance",
+    "family": "risk_adjusted_momentum",
+    "rule": "Score: M6=P[T-1m]/P[T-7m]-1-rf, M12=P[T-1m]/P[T-13m]-1-rf, each divided by 3-year weekly-return volatility; z-score each; C=0.5*Z6+0.5*Z12; re-standardise; winsorise +/-3. Hold top N, buffer at 50% of N, rebalance end May and November. Each month V=sqrt(250)*stdev(3-month daily index returns); if V/V_prev-1 exceeds its historical 95th percentile, rebalance immediately ranking on the 6-month score only.",
+    "params": {
+      "n_positions": 15,
+      "buffer_fraction": 0.5,
+      "vol_window_weeks": 156,
+      "rebalance_months": [
+        5,
+        11
+      ],
+      "trigger_percentile": 95,
+      "trigger_vol_window_months": 3,
+      "parent_index": "NIFTY200"
+    },
+    "instruments": "NSE cash equities, delivery, long only",
+    "holding_period": "about 6 months per stock, shorter after a trigger",
+    "data_needed": [
+      "daily_equity",
+      "daily_index",
+      "other"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "No performance figures taken from the source; it is the June 2017 MSCI Momentum Indexes methodology, used here for its exact ad-hoc rebalance rule. No Indian test found.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Runs as a 10-15 stock semi-annual portfolio with an occasional extra rebalance; fewer trades than monthly momentum.",
+    "sources": [
+      "https://www.msci.com/eqb/methodology/meth_docs/MSCI_Momentum_Indexes_Methodology_June2017.pdf"
+    ]
+  },
+  {
+    "id": "xs_momentum__fifty_two_week_high",
+    "name": "52-week-high momentum (George-Hwang)",
+    "family": "anchor_momentum",
+    "rule": "At month-end compute PTH = P[T] / highest close of the past 252 trading days for each stock in a liquid universe (Nifty 200 or 500). Rank descending; break ties by 12-1 return. Hold the top N equal weight, long only; replace names that fall out of the top 2N at the next month-end. Academic form: long top 30%, short bottom 30%, hold 6 months with overlapping cohorts.",
+    "params": {
+      "high_window_days": 252,
+      "n_positions": 15,
+      "exit_rank_multiple": 2,
+      "rebalance": "monthly",
+      "academic_cut": 0.3,
+      "academic_hold_months": 6
+    },
+    "instruments": "NSE cash equities, delivery, long only",
+    "holding_period": "1-6 months per stock",
+    "data_needed": [
+      "daily_equity",
+      "other"
+    ],
+    "evidence": "strong_academic",
+    "india_evidence": true,
+    "reported_performance": "US CRSP Jul 1963-Dec 2001, (6,6): 0.45%/month long-short (1.23% excluding January) vs 0.48% (1.07%) for Jegadeesh-Titman; in pairwise tests 0.65%/month vs 0.38%, no long-run reversal. India: Raju (2023), Oct 2004-Aug 2023, reports higher risk-adjusted returns than momentum (document description only, paper not opened).",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Long-only 10-15 names; the ratio changes slowly so turnover should be below plain momentum. Exit rank multiple and tie-break are our defaults, not from the paper.",
+    "sources": [
+      "https://www.bauer.uh.edu/tgeorge/papers/gh4-paper.pdf",
+      "https://www.scribd.com/document/694152012/SSRN-id4587697"
+    ]
+  },
+  {
+    "id": "xs_momentum__industry_52w_high_band",
+    "name": "Industry 52-week-high rotation and the Indian 90-95% band test",
+    "family": "anchor_momentum",
+    "rule": "Paper form: per stock PRILAG=P/52-week high; market-cap-weighted average per industry (20 industries); long stocks in the 6 highest industries, short the 6 lowest, equal weight, 3-month hold, one third rebalanced monthly. Indian long-only test: at each month start buy equal weight every stock priced between 90% and 95% of its 52-week high that did not make that high in the past 30 days; sell at next month start.",
+    "params": {
+      "n_industries": 20,
+      "long_industries": 6,
+      "hold_months": 3,
+      "band_lower": 0.9,
+      "band_upper": 0.95,
+      "exclude_new_high_days": 30
+    },
+    "instruments": "NSE cash equities or sector index ETFs, long only",
+    "holding_period": "1-3 months",
+    "data_needed": [
+      "daily_equity",
+      "daily_index",
+      "other"
+    ],
+    "evidence": "negative",
+    "india_evidence": true,
+    "reported_performance": "US 1963-2009: 0.93%/month long-short (about 11.75%/yr) per Quantpedia, whose own out-of-sample test is slightly negative. India (QuantInsti, 2014-2017): about 17% total over three years, Sharpe about 0.4.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "The band rule returns an uncontrolled number of stocks and the Indian test was weak; the industry form needs many stocks or liquid sector ETFs.",
+    "sources": [
+      "https://quantpedia.com/strategies/52-weeks-high-effect-in-stocks",
+      "https://quantpedia.com/an-analysis-of-52-weeks-high-effect-on-indian-stocks/",
+      "https://www.quantinsti.com/blog/trading-strategy-52-weeks-high-effect-in-stocks/"
+    ]
+  },
+  {
+    "id": "xs_momentum__ath_weekly_cash",
+    "name": "All-time-high momentum, weekly review, cash when nothing qualifies",
+    "family": "anchor_momentum",
+    "rule": "Published: up to 10 equal-weight stocks, market cap >= Rs 1,000 crore, very high turnover, chosen by momentum rank and nearness to all-time high, reviewed weekly, idle slots in LIQUIDBEES. Undisclosed thresholds; our test version: candidate if P >= 0.95*all-time high; rank by 6-month return; hold top 10; weekly exit if P < 0.85*all-time high or rank > 30; refill from candidates, else hold cash.",
+    "params": {
+      "n_positions": 10,
+      "min_mcap_cr": 1000,
+      "entry_pct_of_ath": 0.95,
+      "exit_pct_of_ath": 0.85,
+      "rank_lookback_months": 6,
+      "exit_rank": 30,
+      "review": "weekly",
+      "cash_instrument": "LIQUIDBEES"
+    },
+    "instruments": "NSE cash equities plus a liquid ETF",
+    "holding_period": "weeks to months",
+    "data_needed": [
+      "daily_equity",
+      "fundamentals",
+      "other"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "No public figures: the WeekendInvesting Mi ST ATH smallcase shows returns only to subscribers. StockViz notes naive monthly momentum in India has had 50%+ drawdowns every 3-4 years, which this style aims to avoid.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Ten positions of Rs 15,000 fit, but the published rules are incomplete, weekly turnover is costly at 0.6-0.85% per round trip, and the manager's stated optimal size is Rs 5-30 lakh.",
+    "sources": [
+      "https://www.smallcase.com/smallcase/WKIMO_0007",
+      "https://freefloat.substack.com/p/the-momentum-factor",
+      "https://stockviz.substack.com/p/momentum-without-the-crash"
+    ]
+  },
+  {
+    "id": "xs_momentum__residual_momentum",
+    "name": "Residual (idiosyncratic) momentum (Blitz-Huij-Martens)",
+    "family": "residual_momentum",
+    "rule": "Monthly, for each stock with 36 months of history, regress monthly excess return on market, size and value factors over t-36..t-1 (IIMA Indian factors; or market only using Nifty 500). Score = sum of residuals over t-12..t-2 divided by their standard deviation. Hold the top N by score equal weight, long only; replace names leaving the top 2N at month-end. Paper: top minus bottom decile.",
+    "params": {
+      "regression_window_months": 36,
+      "formation_months": 12,
+      "skip_months": 1,
+      "standardise": true,
+      "n_positions": 15,
+      "exit_rank_multiple": 2,
+      "factors": "IIMA_FF3_or_market_model",
+      "rebalance": "monthly"
+    },
+    "instruments": "NSE cash equities, delivery, long only",
+    "holding_period": "1-6 months per stock",
+    "data_needed": [
+      "daily_equity",
+      "daily_index",
+      "other"
+    ],
+    "evidence": "strong_academic",
+    "india_evidence": false,
+    "reported_performance": "US 1926-2009, monthly, gross long-short: 11.2%/yr, volatility 12.5%, Sharpe 0.90 vs 10.3%, 22.7%, 0.45 for total-return momentum; large caps Sharpe 0.60 vs 0.36; 2000-2009 +4.7%/yr vs -8.5%/yr. No Indian study found.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Light computation and 10-15 long-only names. Needs 36 months of history per stock; long-only captures only part of the long-short risk reduction.",
+    "sources": [
+      "https://repub.eur.nl/pub/22252/ResidualMomentum-2011.pdf",
+      "https://www.cxoadvisory.com/momentum-investing/stripping-risks-from-a-stock-momentum-strategy/",
+      "https://quantpedia.com/strategies/residual-momentum-factor",
+      "https://faculty.iima.ac.in/~iffm/Indian-Fama-French-Momentum/"
+    ]
+  },
+  {
+    "id": "xs_momentum__sharpe_ratio_momentum",
+    "name": "Volatility-adjusted (Sharpe) momentum top-N",
+    "family": "risk_adjusted_momentum",
+    "rule": "Universe: top 100 NSE stocks by market cap (refresh yearly) or Nifty 200. At each calendar quarter-end compute SCORE = (252-day return - risk-free) / annualised stdev of daily returns over 252 days. Hold the top N equal weight; next session replace holdings ranked beyond 2N; leave a slot in cash if fewer than N stocks have positive scores. Monthly variant: top 30 from all liquid NSE stocks.",
+    "params": {
+      "lookback_days": 252,
+      "n_positions": 15,
+      "exit_rank_multiple": 2,
+      "rebalance": "quarterly_calendar",
+      "universe": "top100_by_mcap",
+      "require_positive_score": true
+    },
+    "instruments": "NSE cash equities, delivery, long only",
+    "holding_period": "3-12 months per stock",
+    "data_needed": [
+      "daily_equity",
+      "other"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Capitalmind, Jan 2007-2019, top 30 monthly, no costs: 16.8% CAGR vs 12.6% for plain 12-month return and 8.9% Nifty. Large-cap top 20 quarterly: beat Nifty 50 in 9 of 15 years, 2008 drawdown 52.8% vs 59.9%; but similar to a Nifty plus Next 50 mix from 2015 to 2019.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "10-15 large caps rebalanced quarterly keeps turnover and costs low and avoids illiquid names; the exit rank multiple is our default.",
+    "sources": [
+      "https://www.capitalmind.in/insights/momentum-investing-basics-india",
+      "https://premium.capitalmind.in/2019/08/momentum-how-does-it-look-in-large-cap-stocks/",
+      "https://www.capitalmind.in/insights/momentum-strategy-how-many-stocks",
+      "https://forum.valuepickr.com/t/backtesting-volatility-adjusted-momentum-with-a-gold-regime-filter-2018-2026/218153"
+    ]
+  },
+  {
+    "id": "xs_momentum__smooth_path_fip",
+    "name": "Momentum quality: gain-loss and frog-in-the-pan screens",
+    "family": "momentum_quality",
+    "rule": "Universe Nifty 500. Step 1: top 60 by 12-1 return. Step 2: ID = sign(12-1 return) * (% negative days - % positive days) over the same window; keep the 15 lowest ID. Equal weight; rebalance quarterly at the start of March, June, September, December. Alternative single score (Capitalmind): fraction of up days in 252 days times 252-day return, top 30, monthly.",
+    "params": {
+      "stage1_n": 60,
+      "n_positions": 15,
+      "formation_months": 12,
+      "skip_months": 1,
+      "rebalance": "quarterly_start_of_quarter_end_month",
+      "alt_score": "pct_up_days_x_return"
+    },
+    "instruments": "NSE cash equities, delivery, long only",
+    "holding_period": "3-6 months per stock",
+    "data_needed": [
+      "daily_equity",
+      "other"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "Capitalmind gain-loss top 30 monthly, Jan 2007-2019, no costs: 14.7% CAGR vs 12.6% plain momentum. Alpha Architect cites Da-Gurun-Warachka (continuous-information momentum beats discrete) and a study with momentum earning 310 bps in quarter-ending months vs 59 bps otherwise (US).",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Same holdings count and costs as plain momentum; only the ranking changes. Stage sizes for India are our defaults.",
+    "sources": [
+      "https://alphaarchitect.com/wp-content/uploads/2021/08/The_Quantitative_Momentum_Investing_Philosophy.pdf",
+      "https://www.capitalmind.in/insights/momentum-investing-basics-india",
+      "https://tradingqna.com/t/best-way-to-do-momentum-trading-in-india/154146"
+    ]
+  },
+  {
+    "id": "xs_momentum__clenow_adjusted_slope",
+    "name": "Clenow Stocks on the Move (regression slope x R-squared)",
+    "family": "trend_quality_momentum",
+    "rule": "Weekly. Score = annualised slope of a 90-day regression of log close on time, times its R-squared. Exclude stocks below their 100-day average or with any one-day move above 15% in 90 days. Buy from the top of the ranking only when the index is above its 200-day average. Size = risk fraction * equity / ATR(20). Sell names leaving the top 20% of the universe or failing a filter.",
+    "params": {
+      "regression_days": 90,
+      "ma_filter_days": 100,
+      "max_gap": 0.15,
+      "index_ma_days": 200,
+      "atr_days": 20,
+      "risk_fraction": 0.001,
+      "exit_top_fraction": 0.2,
+      "review": "weekly",
+      "universe": "NIFTY200"
+    },
+    "instruments": "NSE cash equities, delivery, long only",
+    "holding_period": "weeks to months",
+    "data_needed": [
+      "daily_equity",
+      "daily_index",
+      "other"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "Book tests (US S&P 500, 1994-2015) not opened; TuringTrader describes the rules and a typical 10-30 holdings. No Indian test found. Exit threshold and risk fraction are taken from general descriptions, not verified.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Weekly reviews and volatility-based share counts fit poorly with Rs 10-15k positions and per-sell DP charges; test with about 10 names and fortnightly trading.",
+    "sources": [
+      "https://turingtrader-com.web.app/portfolios/clenow-stocks-on-the-move",
+      "https://quant-investing.com/blog/how-to-find-stocks-on-the-move-with-a-better-momentum-indicator-exponential-regression"
+    ]
+  },
+  {
+    "id": "xs_momentum__vol_target_overlay",
+    "name": "Constant-volatility scaling of momentum exposure (Barroso-Santa-Clara)",
+    "family": "crash_protection_overlay",
+    "rule": "Run any momentum stock portfolio. At each month-end compute the realised annualised volatility of the portfolio's daily returns over the last 126 trading days. Equity fraction w = min(1, target_vol / realised_vol); hold the remainder in a liquid-fund ETF. Change the fraction only when it moves by more than 10 percentage points. Paper: scale a long-short book to 12% volatility without the cap.",
+    "params": {
+      "vol_window_days": 126,
+      "target_vol": 0.16,
+      "max_weight": 1.0,
+      "min_change": 0.1,
+      "cash_instrument": "LIQUIDBEES",
+      "paper_target_vol": 0.12
+    },
+    "instruments": "Momentum stock basket or momentum ETF plus a liquid ETF",
+    "holding_period": "monthly adjustment",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "strong_academic",
+    "india_evidence": true,
+    "reported_performance": "US (1927-2011 per search snippet): scaling nearly doubles momentum's Sharpe ratio and removes crashes (Barroso-Santa-Clara via Quantpedia and Alpha Architect). India: risk-managed momentum doubles adjusted Sharpe on 450 BSE stocks (Singh et al. 2022). Own check on IIMA WML factor Jun 1994-Dec 2025, gross: mean/vol 0.56 to 0.89, worst month -27.6% to -13.2%.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "One extra buy or sell in a liquid ETF per month. Evidence is for long-short momentum; benefit for a long-only portfolio is untested. Target and change threshold are our defaults.",
+    "sources": [
+      "https://alphaarchitect.com/avoiding-momentum-crashes/",
+      "https://quantpedia.com/strategies/momentum-factor-effect-in-stocks",
+      "https://ideas.repec.org/a/sae/fbbsrw/v11y2022i3p347-358.html",
+      "https://faculty.iima.ac.in/~iffm/Indian-Fama-French-Momentum/"
+    ]
+  },
+  {
+    "id": "xs_momentum__bear_state_overlay",
+    "name": "Bear-state and rebound switch (Daniel-Moskowitz, Dierkes-Krupski)",
+    "family": "crash_protection_overlay",
+    "rule": "Monthly: BEAR = 1 if the Nifty 500 total return over the past 24 months is negative. REBOUND = BEAR and last month's index return > 0. While REBOUND = 1 hold the broad index ETF instead of the momentum basket (or halve the basket); switch back when BEAR = 0. Papers: weight long-short momentum by forecast mean over variance using BEAR and 126-day market variance.",
+    "params": {
+      "bear_lookback_months": 24,
+      "rebound_lookback_months": 1,
+      "market_var_window_days": 126,
+      "action": "switch_to_index_etf",
+      "index": "NIFTY500"
+    },
+    "instruments": "Momentum stock basket or ETF, plus a broad index ETF",
+    "holding_period": "state lasts months; rare switches",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "strong_academic",
+    "india_evidence": true,
+    "reported_performance": "US 1927-2013: dynamic weighting about doubles alpha and Sharpe of static momentum; crash-indicator months average -3.63% vs +1.49% (1928-2020). Own check on IIMA WML factor Dec 1995-Dec 2025: 1.40%/month in normal states, 0.75% in bear states, -3.09% in bear-state months when the market rose.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "A few switches per decade between a basket and an index ETF. For long-only holders it addresses relative lag in rebounds only: Indian large-cap winners still rose 10.6% and 21.9% in April and May 2009.",
+    "sources": [
+      "https://www.nber.org/system/files/working_papers/w20439/w20439.pdf",
+      "https://alphaarchitect.com/avoiding-momentum-crashes/",
+      "https://faculty.iima.ac.in/~iffm/Indian-Fama-French-Momentum/"
+    ]
+  },
+  {
+    "id": "xs_momentum__index_trend_cash_switch",
+    "name": "Momentum with market trend filter, switching to cash or gold",
+    "family": "trend_filtered_momentum",
+    "rule": "Run a top-N momentum portfolio. Weekly check: if Nifty 500 close < its 200-day simple average, make no new buys and park proceeds of exits in LIQUIDBEES (variant B: sell everything; variant C: also require each stock above its own 200-day average; variant D: park in GOLDBEES). Resume buying when the index closes back above the average.",
+    "params": {
+      "index": "NIFTY500",
+      "ma_days": 200,
+      "check": "weekly",
+      "mode": "no_new_buys",
+      "cash_instrument": "LIQUIDBEES",
+      "alt_cash_instrument": "GOLDBEES"
+    },
+    "instruments": "NSE cash equities plus liquid or gold ETF",
+    "holding_period": "months; cash periods of weeks to months",
+    "data_needed": [
+      "daily_equity",
+      "daily_index"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Capitalmind Adaptive Momentum PMS (cash rule, live since Mar 2019, net of fees, page dated 6 Nov 2026): 7 years 17.8% vs Nifty 50 TRI 12.4%, but 5 years 7.0% vs 8.3% and 2 years -5.9% vs 2.3%. WeekendInvesting Mi 25 (manager's figures, Apr 2016-Jan 2023): +506% vs +134% for Smallcap 250. NIFTYBEES 200-EMA test: lower return, drawdown -20% vs -36%.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Adds only a daily index check and occasional liquid-ETF orders. Whipsaws and missed V-shaped recoveries are the cost; exact manager rules are undisclosed so the moving-average rule is a stand-in.",
+    "sources": [
+      "https://capitalmind.in/portfolio-management-service/momentum",
+      "https://premium.capitalmind.in/introduction-to-capitalmind-momentum-model/",
+      "https://www.smallcase.com/blog/mi-25-our-flagship-smallcap-strategy/",
+      "https://momentumlab.substack.com/p/backtesting-momentum-investing-strategies-1eb",
+      "https://forum.valuepickr.com/t/backtesting-volatility-adjusted-momentum-with-a-gold-regime-filter-2018-2026/218153",
+      "https://turingtrader-com.web.app/portfolios/clenow-stocks-on-the-move"
+    ]
+  },
+  {
+    "id": "xs_momentum__alpha_low_vol30_replica",
+    "name": "Nifty Alpha Low-Volatility 30 replica (momentum plus low volatility)",
+    "family": "multi_factor",
+    "rule": "Universe: Nifty 100 plus Nifty Midcap 50. Alpha Z from 1-year Jensen's alpha versus Nifty 50; low-vol Z from inverse 1-year daily volatility; convert each Z to score (1+Z if Z>0 else 1/(1-Z)) then percentile; average the two percentiles. June and December: top 10 always in, holdings ranked beyond 50 exit, 30 names. Weight by average factor Z score, capped min(5%, 5x free-float weight).",
+    "params": {
+      "n_positions": 30,
+      "compulsory_entry_rank": 10,
+      "exit_rank": 50,
+      "alpha_weight": 0.5,
+      "low_vol_weight": 0.5,
+      "window_days": 252,
+      "rebalance_months": [
+        6,
+        12
+      ],
+      "retail_variant_n": 15
+    },
+    "instruments": "Nifty 100 and Midcap 50 stocks, delivery, long only; or ETF",
+    "holding_period": "6 months or longer per stock",
+    "data_needed": [
+      "daily_equity",
+      "daily_index",
+      "other"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "TR Apr 2005-30 Oct 2026: 17.58%/yr with since-inception volatility about 17.2% vs 22.4% for Nifty 50; 5 years 8.98%; 1 year -6.07%. Launched 10 Jul 2017.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "30 names is too many, but an equal-weight top-15 of large liquid stocks with semi-annual changes is cheap to run.",
+    "sources": [
+      "https://www.niftyindices.com/Methodology/Method_NIFTY_Equity_Indices.pdf",
+      "https://www.niftyindices.com/Factsheet/Factsheet_Nifty_Alpha_Low-Volatility_30.pdf",
+      "https://www.niftyindices.com/Factsheet/ind_nifty50.pdf"
+    ]
+  },
+  {
+    "id": "xs_momentum__conservative_formula",
+    "name": "Conservative formula: low volatility, then momentum plus payout yield",
+    "family": "multi_factor",
+    "rule": "Quarterly. Universe: Nifty 500. Keep the half with the lowest 36-month return volatility. Rank those on 12-1 return and on net payout yield (dividend yield as proxy); average the two ranks; hold the best N equal weight. Original: 1,000 largest stocks, 500 least volatile, best 100 by average rank.",
+    "params": {
+      "vol_window_months": 36,
+      "formation_months": 12,
+      "skip_months": 1,
+      "n_positions": 15,
+      "rebalance": "quarterly",
+      "yield_measure": "dividend_yield_proxy",
+      "original_n": 100
+    },
+    "instruments": "NSE cash equities, delivery, long only",
+    "holding_period": "3-12 months per stock",
+    "data_needed": [
+      "daily_equity",
+      "fundamentals",
+      "other"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": false,
+    "reported_performance": "US since 1929: 15.1% compounded a year, about 13 points a year above the speculative mirror portfolio, positive in every decade; also tested in Europe, Japan and emerging markets (Blitz-van Vliet via Alpha Architect). An Indian replication (Raju and Teli 2022) exists per search snippet only; not opened.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "15-20 low-volatility names quarterly is affordable, but payout or dividend-yield history is needed and the Indian evidence was not verified.",
+    "sources": [
+      "https://alphaarchitect.com/the-conservative-formula-quantitative-investing-made-easy/"
+    ]
+  },
+  {
+    "id": "xs_momentum__momentum_quality50_replica",
+    "name": "Nifty500 Multicap Momentum Quality 50 replica",
+    "family": "multi_factor",
+    "rule": "Universe: Nifty 500 split into Nifty 100, Midcap 150, Smallcap 250 with circuit, pledge and turnover exclusions per segment. Momentum percentile from NMS; quality percentile from ROE, debt/equity (non-financials) and 5-year EPS growth variability. Aggregate = 50/50. Semi-annual: hold top 10 large, 15 mid, 25 small; stay if ranked within 15/23/38; non-members in top 5/8/13 enter. Weight = free-float mcap x composite score, 5% cap.",
+    "params": {
+      "n_large": 10,
+      "n_mid": 15,
+      "n_small": 25,
+      "stay_ranks": [
+        15,
+        23,
+        38
+      ],
+      "entry_ranks": [
+        5,
+        8,
+        13
+      ],
+      "momentum_weight": 0.5,
+      "quality_weight": 0.5,
+      "rebalance_months": [
+        6,
+        12
+      ],
+      "weight_cap": 0.05
+    },
+    "instruments": "Nifty 500 stocks, delivery, long only; or index fund",
+    "holding_period": "6 months or longer per stock",
+    "data_needed": [
+      "daily_equity",
+      "fundamentals",
+      "other"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "TR Apr 2005-30 Oct 2026: 19.85%/yr; 5 years to 30 Oct 2026: 8.59% vs Nifty 500 8.81%; 1 year -9.01%. Launched 4 Sep 2024; earlier history back-calculated.",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "50 names, half of them small caps, plus five years of fundamentals; not practical to replicate with Rs 1.5 lakh.",
+    "sources": [
+      "https://www.niftyindices.com/Methodology/Method_NIFTY_Equity_Indices.pdf",
+      "https://www.niftyindices.com/Factsheet/Factsheet_Nifty500MulticapMQ50.pdf",
+      "https://www.niftyindices.com/Factsheet/ind_nifty_500.pdf"
+    ]
+  },
+  {
+    "id": "xs_momentum__intermediate_12_7",
+    "name": "Intermediate-horizon (12-7 month) momentum",
+    "family": "price_momentum",
+    "rule": "As total-return momentum but rank on the return from 12 months ago to 7 months ago: SCORE = P[T-126]/P[T-252]-1. Hold top N equal weight, monthly, long only, same universe and exit rules. Use only as a robustness comparison against 12-1 and 6-1 rankings.",
+    "params": {
+      "far_days": 252,
+      "near_days": 126,
+      "n_positions": 15,
+      "rebalance": "monthly"
+    },
+    "instruments": "NSE cash equities, delivery, long only",
+    "holding_period": "1-6 months per stock",
+    "data_needed": [
+      "daily_equity",
+      "other"
+    ],
+    "evidence": "negative",
+    "india_evidence": false,
+    "reported_performance": "Novy-Marx (2012) reports US momentum is driven mainly by months 12-7 (snippet only). Goyal-Wahal: no robust echo in 36 non-US markets, 1991-2009; recent momentum matters more where spreads are large. Alpha Architect: 12_2 and 12_7 very similar for long-only use.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Trivially implementable with the same holdings as plain momentum, but there is no evidence it is better outside the US.",
+    "sources": [
+      "https://cxoadvisory.com/momentum-investing/momentum-echo-outside-the-u-s",
+      "https://alphaarchitect.com/when-academics-disagree-on-momentum-investing/"
+    ]
+  },
+  {
+    "id": "xs_momentum__industry_momentum",
+    "name": "Industry (sector) momentum (Moskowitz-Grinblatt)",
+    "family": "sector_momentum",
+    "rule": "Monthly: rank NSE sector indices by 6-month return. Hold the top 3 sectors equally through liquid sector ETFs, or the 3-4 largest stocks of each chosen sector, for one month; replace sectors that leave the top 3. Academic form: long stocks in the top 30% of industries by 6-month value-weighted industry return, short the bottom 30%, hold 6 months.",
+    "params": {
+      "lookback_months": 6,
+      "n_sectors": 3,
+      "stocks_per_sector": 4,
+      "rebalance": "monthly",
+      "academic_cut": 0.3,
+      "academic_hold_months": 6
+    },
+    "instruments": "Sector ETFs or large stocks within sectors, long only",
+    "holding_period": "1-6 months",
+    "data_needed": [
+      "daily_index",
+      "daily_equity",
+      "other"
+    ],
+    "evidence": "strong_academic",
+    "india_evidence": false,
+    "reported_performance": "US Jul 1963-Dec 2001 (as restated by George-Hwang): 0.45%/month long-short, 0.50% excluding January; weaker than the 52-week-high measure in pairwise tests (0.25% vs 0.65%). No Indian test opened.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Few liquid sector ETFs in India; done with stocks it becomes a concentrated 9-12 name portfolio with sector risk.",
+    "sources": [
+      "https://www.bauer.uh.edu/tgeorge/papers/gh4-paper.pdf"
+    ]
+  },
+  {
+    "id": "xs_momentum__buffered_rank_hold",
+    "name": "Buffered-rank holding (hysteresis and minimum hold) turnover control",
+    "family": "portfolio_construction",
+    "rule": "Apply to any momentum ranking. Monthly: buy a stock only when a slot is free and its rank <= N_in; sell only when rank > N_out or it leaves the universe; require a minimum holding of 21 trading days before replacement; never trim or top up survivors. Defaults N=15, N_in=10, N_out=30. Compare monthly, quarterly and semi-annual schedules.",
+    "params": {
+      "n_positions": 15,
+      "entry_rank": 10,
+      "exit_rank": 30,
+      "min_hold_days": 21,
+      "rebalance": "monthly",
+      "schedules_to_test": [
+        "monthly",
+        "quarterly",
+        "semi_annual"
+      ],
+      "reweight_survivors": false
+    },
+    "instruments": "NSE cash equities, delivery, long only",
+    "holding_period": "3-12 months per stock",
+    "data_needed": [
+      "daily_equity",
+      "other"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "NSE indices buffer 30 names at ranks 15/45 and 50 names at 25/75; MSCI buffers at 50%. NSE study to Feb 2026: quarterly rebalancing added 20-70% churn and gave lower since-2005 returns than semi-annual for Nifty200 Momentum 30 (17.12% vs 19.19%) and Nifty500 Momentum 50 (21.16% vs 21.94%). Capitalmind large caps: quarterly beat monthly.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "This is what makes direct stock momentum affordable: each avoided round trip saves 0.6-1.0% of a Rs 10-15k position plus 20% tax on the gain realised.",
+    "sources": [
+      "https://www.niftyindices.com/Methodology/Method_NIFTY_Equity_Indices.pdf",
+      "https://www.niftyindices.com/docs/default-source/indices/nifty200-momentum-30/momentum-strategy-whitepaper_2026.pdf",
+      "https://www.msci.com/eqb/methodology/meth_docs/MSCI_Momentum_Indexes_Methodology_June2017.pdf",
+      "https://premium.capitalmind.in/introduction-to-capitalmind-momentum-model/",
+      "https://premium.capitalmind.in/2019/08/momentum-how-does-it-look-in-large-cap-stocks/",
+      "https://zerodha.com/varsity/chapter/momentum-portfolios/",
+      "https://alphaarchitect.com/wp-content/uploads/2021/08/The_Quantitative_Momentum_Investing_Philosophy.pdf",
+      "https://www.bauer.uh.edu/rsusmel/phd/jegadeesh-titman93.pdf"
+    ]
+  },
+  {
+    "id": "xs_momentum__low_scaled_turnover_annual",
+    "name": "Momentum among low scaled-turnover stocks, annual rebalance",
+    "family": "liquidity_conditioned_momentum",
+    "rule": "Each December: universe = top 200 NSE stocks by market cap with PE > 0. Take the top 30 by 12-month return. Compute scaled turnover = average daily traded value / market cap; keep the 15 with the lowest value. Equal weight at purchase; hold 12 months; at the next December review sell names no longer selected and buy the new ones.",
+    "params": {
+      "universe_n": 200,
+      "momentum_n": 30,
+      "n_positions": 15,
+      "lookback_months": 12,
+      "rebalance_month": 12,
+      "pe_positive": true,
+      "turnover_sort": "lowest"
+    },
+    "instruments": "NSE cash equities, delivery, long only",
+    "holding_period": "12 months or longer",
+    "data_needed": [
+      "daily_equity",
+      "fundamentals",
+      "other"
+    ],
+    "evidence": "anecdotal",
+    "india_evidence": true,
+    "reported_performance": "BacktestIndia, Dec 2006-2025, net of 0.11% costs, 0.05% slippage and capital gains tax: low scaled turnover 19.43% CAGR (max drawdown -66.4%), all 30 names 14.60% (-70.6%), high scaled turnover 8.51% (-75.1%), Nifty 50 10.41%. Single self-published backtest, not replicated.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "15 names, roughly one rebalance a year and mostly long-term gains inside the Rs 1.25 lakh exemption. Less liquid large caps are still easy to trade in Rs 10,000 lots. Needs market-cap history.",
+    "sources": [
+      "https://backtestindia.com/blog/momentum-factor-india-liquidity-premium-scaled-turnover",
+      "https://freefincal.com/is-indian-momentum-investing-just-a-liquidity-illusion/"
+    ]
+  },
+  {
+    "id": "xs_momentum__next50_top10_rotation",
+    "name": "Nifty Next 50 top-10 monthly rotation",
+    "family": "price_momentum",
+    "rule": "Universe: current Nifty Next 50 constituents. On the last trading day of each month rank by 12-1 return (manager's formula undisclosed). Always hold 10 stocks, never cash: on the first trading day of the next month sell holdings ranked beyond 15 and buy the highest-ranked non-holdings. Published version resets all weights to 10% monthly; skip that at small size.",
+    "params": {
+      "universe": "NIFTY_NEXT_50",
+      "n_positions": 10,
+      "exit_rank": 15,
+      "lookback_months": 12,
+      "skip_months": 1,
+      "rebalance": "monthly",
+      "reweight_survivors": false
+    },
+    "instruments": "Nifty Next 50 stocks, delivery, long only",
+    "holding_period": "1-6 months per stock",
+    "data_needed": [
+      "daily_equity",
+      "other"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "WeekendInvesting Mi NNF 10 (manager's figures, back-tested before the 12 Nov 2020 launch), Apr 2016-Oct 2022: 21.1% CAGR vs 13.3% for Nifty Next 50, max drawdown 23.6% vs 42%.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Ten liquid large caps at Rs 15,000 each, about 0.62% per round trip. Ranking rule and exit rank are our stand-ins for the undisclosed formula.",
+    "sources": [
+      "https://www.smallcase.com/blog/mi-nnf-10-the-passive-money-spinning-strategy/",
+      "https://www.niftyindices.com/Factsheet/ind_next50.pdf"
+    ]
+  },
+  {
+    "id": "xs_momentum__acceleration",
+    "name": "Momentum acceleration (recent 6 months minus prior 6 months)",
+    "family": "price_momentum",
+    "rule": "Monthly: SCORE = (P[T]/P[T-126]-1) - (P[T-126]/P[T-252]-1) for each stock in a liquid universe. Hold the top N equal weight, long only; replace names that leave the top 2N at month-end. Treat as an untested idea and compare against 12-1 momentum on the same universe.",
+    "params": {
+      "half_window_days": 126,
+      "n_positions": 15,
+      "exit_rank_multiple": 2,
+      "rebalance": "monthly"
+    },
+    "instruments": "NSE cash equities, delivery, long only",
+    "holding_period": "1-3 months per stock",
+    "data_needed": [
+      "daily_equity",
+      "other"
+    ],
+    "evidence": "anecdotal",
+    "india_evidence": false,
+    "reported_performance": "No performance figures found; listed by FreeFloat/StockViz (2020) among common momentum measures.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Mechanically identical to plain momentum in cost and holdings; likely higher turnover because the score changes quickly.",
+    "sources": [
+      "https://freefloat.substack.com/p/the-momentum-factor"
+    ]
+  }
+]

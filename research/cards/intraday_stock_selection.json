@@ -1,0 +1,686 @@
+[
+  {
+    "id": "intraday_stock_selection__stocks_in_play_rvol_orb",
+    "name": "Stocks in play: relative-volume ranked 5-minute opening range breakout",
+    "family": "opening_range_breakout",
+    "rule": "Universe: liquid NSE stocks, prev_close>=100, ATR14/price>=1%. At 09:20 compute RVOL5 = volume(09:15-09:19)/mean of the same window over the prior 14 sessions. Keep RVOL5>=1; take top N by RVOL5. If first 5-min candle close>open place buy-stop at its high; if close<open sell-stop at its low; skip doji. Stop k*ATR14 from entry. Exit 15:10. Risk 1% of equity per trade; total leverage cap 5x.",
+    "params": {
+      "or_minutes": 5,
+      "rvol_lookback_days": 14,
+      "rvol_min": 1.0,
+      "top_n": 3,
+      "stop_atr_mult": 0.1,
+      "stop_atr_mult_alternatives": [
+        0.25,
+        0.5
+      ],
+      "atr_days": 14,
+      "min_atr_pct": 0.01,
+      "min_price": 100,
+      "risk_per_trade_pct": 1.0,
+      "max_leverage": 5,
+      "entry_valid_until": "12:00",
+      "exit_time": "15:10"
+    },
+    "instruments": "NSE cash equities, intraday (MIS), long and short",
+    "holding_period": "intraday, minutes to about 6 hours",
+    "data_needed": [
+      "intraday",
+      "daily_equity"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": false,
+    "reported_performance": "US stocks 2016-2023, net of $0.0035/share, no slippage model: top 20 by relative volume Sharpe 2.81, IRR 41.6%, max drawdown 12%; same entry without the volume filter Sharpe 0.48, IRR 3.2%. Average per trade -0.02R below 100% relative volume, +0.08R above, +0.38R above 3000%. Replication covers 2016 only (Sharpe 2.4).",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Cash MIS at 5x allows 2-3 positions of Rs 1.5-2.5 lakh, but a 0.1*ATR stop is about 0.25% of price and an Indian round trip costs about 0.13% with slippage, roughly 0.5R against a published average edge of 0.08R. Needs a wider stop or only extreme relative volume.",
+    "sources": [
+      "https://www.alexandria.unisg.ch/server/api/core/bitstreams/3c2989c4-688d-4d78-8a71-f02690990d51/content",
+      "https://www.quantconnect.com/research/18444/opening-range-breakout-for-stocks-in-play/",
+      "https://www.angelone.in/pricing"
+    ]
+  },
+  {
+    "id": "intraday_stock_selection__opening_gap_fade",
+    "name": "Opening gap fade (ordinary gap, no catalyst)",
+    "family": "gap",
+    "rule": "At 09:15 flag stocks opening above prev high or below prev low with 0.2%<=|gap|<=3%, not a results day. At 09:20 require RVOL5<1.5 and first 5-min candle closing toward the prior range. Enter against the gap (short gap-up, long gap-down). Target prior day high (gap-up) or low (gap-down). Stop 0.5*ATR14 beyond the opening-range extreme. Time exit 12:30, else 15:10.",
+    "params": {
+      "gap_min": 0.002,
+      "gap_max": 0.03,
+      "gap_max_alternatives": [
+        0.02,
+        0.05
+      ],
+      "rvol_max": 1.5,
+      "stop_atr_mult": 0.5,
+      "time_exit": "12:30",
+      "exit_time": "15:10",
+      "max_positions": 3
+    },
+    "instruments": "NSE cash equities, intraday (MIS), long and short",
+    "holding_period": "intraday, up to about 3 hours",
+    "data_needed": [
+      "intraday",
+      "daily_equity",
+      "events"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "S&P 500 members, two years to Oct 2010, 125,811 stock-days: 76% of opening gaps traded back into the prior day's range the same day, 70% for gaps above 0.2%, only 9.6% for gaps beyond 5%. Hit rates only; no profit, stop or cost figures.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Runs in cash MIS in both directions, but the target is the gap itself (0.4-1%), so a 0.13-0.27% round trip takes a third or more of the gross, and the losers are news gaps that do not fill.",
+    "sources": [
+      "https://www.smbtraining.com/blog/gap-study-33",
+      "https://publishingindia.com/archive/ijfm/prior-return-effect-in-indian-stock-market-an-intra-day-analysis",
+      "https://intradaylab.com/blog/nifty-orb-breakout-strategy-backtest"
+    ]
+  },
+  {
+    "id": "intraday_stock_selection__gap_and_go_high_rvol",
+    "name": "Gap and go: large gap with abnormal opening volume",
+    "family": "gap",
+    "rule": "Select stocks with |gap|>=max(2%, ATR14/price) and RVOL5>=2. Trade only in the gap direction: stop-entry at the 5-min opening-range extreme, valid to 11:00. Stop at the opposite end of the opening range, capped at 0.5*ATR14. Exit 15:10. Max 2 positions. Skip the day if over 20% of the universe gapped the same way by more than 1%.",
+    "params": {
+      "gap_min": 0.02,
+      "gap_min_alternatives": [
+        0.01,
+        0.03,
+        0.05
+      ],
+      "gap_min_atr_mult": 1.0,
+      "rvol_min": 2.0,
+      "or_minutes": 5,
+      "stop_cap_atr_mult": 0.5,
+      "entry_valid_until": "11:00",
+      "exit_time": "15:10",
+      "max_positions": 2,
+      "breadth_skip_share": 0.2
+    },
+    "instruments": "NSE cash equities, intraday (MIS), long and short",
+    "holding_period": "intraday, minutes to about 6 hours",
+    "data_needed": [
+      "intraday",
+      "daily_equity"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "No direct test found. Indirect: US gaps beyond 5% filled only 9.6% of the time (2008-2010); high relative-volume breakouts averaged +0.38R at over 30x volume (US 2016-2023). Against: gap continuation on Micro Nasdaq futures failed walk-forward validation, 2021-2025 (T=1.46, year-unstable).",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "One or two cash MIS positions a day at most; few signals a month in a 200-stock universe. Edge unproven for India.",
+    "sources": [
+      "https://www.smbtraining.com/blog/gap-study-33",
+      "https://www.alexandria.unisg.ch/server/api/core/bitstreams/3c2989c4-688d-4d78-8a71-f02690990d51/content",
+      "https://arxiv.org/abs/2605.04004"
+    ]
+  },
+  {
+    "id": "intraday_stock_selection__nr7_inside_day_breakout",
+    "name": "Narrow range (NR4/NR7) and inside day breakout",
+    "family": "volatility_contraction",
+    "rule": "After the close flag stocks whose daily range is the smallest of the last 7 sessions (NR7); variants NR4, inside day, NR7 plus inside day. Next session place buy-stop at pattern-day high and sell-stop at pattern-day low; first trigger only, valid to 13:00. Stop at the other side of the pattern range or 0.5*ATR14, whichever is nearer. Exit 15:10. Variant: sell side only.",
+    "params": {
+      "nr_lookback": 7,
+      "nr_lookback_alternatives": [
+        4
+      ],
+      "require_inside_day": false,
+      "stop_atr_mult": 0.5,
+      "entry_valid_until": "13:00",
+      "exit_time": "15:10",
+      "sell_side_only": false,
+      "max_positions": 3
+    },
+    "instruments": "NSE cash equities, intraday (MIS), long and short",
+    "holding_period": "intraday; variants next day and 5 days in the source",
+    "data_needed": [
+      "daily_equity",
+      "intraday"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "Indian F&O stocks from 2015, NR7 plus inside bar, 2,238 signals, no costs, units undefined: same-day exit averaged +124 per buy signal (546 wins, 611 losses) and +473 per sell signal (642 wins, 484 losses). US stocks 1990-2013: only upward breakouts in bull markets were profitable ($78.79 per trade, 57% wins).",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Selection needs only daily bars; trades are cash MIS. The narrow pattern range makes stops tight, so cost per unit of risk is high.",
+    "sources": [
+      "https://unofficed.com/courses/backtesting-buddha/lessons/backtesting-narrow-range-inside-bar-strategy-using-python/",
+      "https://thepatternsite.com/nr7.html",
+      "https://quantifiedstrategies.substack.com/p/nr7-trading-strategy-explained-for"
+    ]
+  },
+  {
+    "id": "intraday_stock_selection__atr_range_expansion_filter",
+    "name": "Volatility and range-expansion universe filter",
+    "family": "universe_filter",
+    "rule": "Each morning rank the universe by ATR14/prev_close. Allow trend-following intraday entries only in stocks with ATRpct>=min_atr_pct, or in the top third by ATRpct. Optional: require the previous day's true range>=1.5*ATR14 (range expansion) or the widest range of the last 7 days. Apply as an on/off filter to every base strategy and compare results with and without it.",
+    "params": {
+      "atr_days": 14,
+      "min_atr_pct": 0.01,
+      "min_atr_pct_alternatives": [
+        0.015,
+        0.02
+      ],
+      "top_fraction": 0.33,
+      "range_expansion_mult": 1.5,
+      "wide_range_lookback": 7
+    },
+    "instruments": "filter applied to NSE cash equities",
+    "holding_period": "not applicable (filter)",
+    "data_needed": [
+      "daily_equity"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": true,
+    "reported_performance": "US 2016 replication: ATR floors from $0 to $2 all gave Sharpe 1.5-2.7, and an ATR>1% of price filter gave 2.24, so the level is not critical. Nifty index 30-minute breakout, Jul 2017-Mar 2026, no costs: wide opening-range days +30.3% versus tiny-range days +18.6%.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "A filter; costs nothing to run. Volatility is needed for moves large enough to cover a 0.07-0.27% round trip, but it gives no direction.",
+    "sources": [
+      "https://www.alexandria.unisg.ch/server/api/core/bitstreams/3c2989c4-688d-4d78-8a71-f02690990d51/content",
+      "https://www.quantconnect.com/research/18444/opening-range-breakout-for-stocks-in-play/",
+      "https://intradaylab.com/blog/nifty-orb-breakout-strategy-backtest",
+      "https://econpapers.repec.org/RePEc:eee:jfinec:v:129:y:2018:i:2:p:394-414"
+    ]
+  },
+  {
+    "id": "intraday_stock_selection__intraday_relative_strength_vs_index",
+    "name": "Intraday relative strength versus NIFTY and sector",
+    "family": "relative_strength",
+    "rule": "At T compute RS = stock return since prev_close minus beta*NIFTY return since prev_close (60-day beta). If NIFTY return>0 buy top k by RS that are above session VWAP and above the 30-min opening-range high; if <0 short bottom k below VWAP and below the 30-min range low. Optional: the stock's sector must rank top or bottom two by mean RS. Stop VWAP cross or 0.5*ATR14. Exit 15:10.",
+    "params": {
+      "signal_time": "10:30",
+      "signal_time_alternatives": [
+        "10:00",
+        "11:00"
+      ],
+      "beta_days": 60,
+      "k": 2,
+      "or_minutes": 30,
+      "sector_confirm": false,
+      "stop_atr_mult": 0.5,
+      "exit_time": "15:10"
+    },
+    "instruments": "NSE cash equities, intraday (MIS), long and short",
+    "holding_period": "intraday, about 4 to 5 hours",
+    "data_needed": [
+      "intraday",
+      "daily_equity",
+      "daily_index",
+      "other"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "No rigorous test found in any market. Related only: US stocks with high past-month intraday returns keep earning high intraday returns (+2.19% a month decile spread, 1993-2013); index-level momentum into the close.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Two cash MIS positions of Rs 1.5-3 lakh keep the round trip near 0.05-0.07%. Needs a sector map (other). Edge untested.",
+    "sources": [
+      "https://personal.lse.ac.uk/polk/research/TugOfWar.pdf",
+      "https://econpapers.repec.org/RePEc:eee:jfinec:v:129:y:2018:i:2:p:394-414",
+      "https://arxiv.org/abs/1005.3535"
+    ]
+  },
+  {
+    "id": "intraday_stock_selection__index_direction_gate",
+    "name": "Index direction gate (market intraday momentum)",
+    "family": "market_regime_filter",
+    "rule": "r_open = NIFTY(09:45)/NIFTY prev_close-1. If |r_open|>=0.3% allow only stock trades in that direction today; else both. Late variant: at 14:40 if NIFTY return since prev_close is positive buy (negative: short) the 2 stocks with the largest beta-adjusted same-direction return; exit 15:10.",
+    "params": {
+      "gate_time": "09:45",
+      "gate_threshold": 0.003,
+      "late_entry_time": "14:40",
+      "late_positions": 2,
+      "exit_time": "15:10"
+    },
+    "instruments": "filter on NSE cash equities; late variant trades 2 stocks (MIS)",
+    "holding_period": "gate: all day; late variant 30 minutes",
+    "data_needed": [
+      "intraday",
+      "daily_index"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": false,
+    "reported_performance": "S&P 500 ETF 1993-2013: first half-hour return from the prior close predicts the last half-hour return, stronger on volatile and high-volume days; an earlier 1999-2012 version reported R-squared 2% and 6.34% a year. Over 60 futures 1974-2020 show the same. The overnight-return variant disappears out of sample. Not tested as a stock filter.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "The gate is free. The late variant earns a half-hour move that is small against a 0.07% round trip, and our 15:10 exit misses the true last half hour.",
+    "sources": [
+      "https://econpapers.repec.org/RePEc:eee:jfinec:v:129:y:2018:i:2:p:394-414",
+      "https://alphaarchitect.com/2014/08/attention-prop-traders-the-first-half-hour-of-trading-predicts-the-last-half-hour/",
+      "https://www3.nd.edu/~zda/intramom.pdf"
+    ]
+  },
+  {
+    "id": "intraday_stock_selection__same_time_of_day_continuation",
+    "name": "Same-time-of-day continuation (intraday periodicity)",
+    "family": "intraday_seasonality",
+    "rule": "Split 09:15-15:15 into 12 half-hour intervals. For stock s and interval j, score = mean return of s in interval j over the previous 20 sessions. Standalone: in interval j go long the top decile and short the bottom decile by score, exit at interval end. Practical: use the score sign only to time entries of other strategies.",
+    "params": {
+      "interval_minutes": 30,
+      "lookback_days": 20,
+      "lookback_days_alternatives": [
+        40
+      ],
+      "decile": 0.1
+    },
+    "instruments": "NSE cash equities, intraday (MIS), long and short",
+    "holding_period": "30 minutes",
+    "data_needed": [
+      "intraday"
+    ],
+    "evidence": "strong_academic",
+    "india_evidence": false,
+    "reported_performance": "US stocks (Journal of Finance 2010): return continuation at half-hour intervals that are exact multiples of a day, lasting at least 40 days; authors' practical claim is a saving equal to the effective spread from timing trades. Abstract only read; no return figure quoted.",
+    "feasible_at_150k": "no",
+    "feasibility_reason": "Up to 12 round trips a day per name at 0.07-0.27% each; the effect is of spread size. Only usable as an entry-timing tie-breaker.",
+    "sources": [
+      "https://arxiv.org/abs/1005.3535"
+    ]
+  },
+  {
+    "id": "intraday_stock_selection__intraday_return_persistence",
+    "name": "Intraday-return persistence (overnight versus intraday tug of war)",
+    "family": "overnight_intraday_decomposition",
+    "rule": "Daily: ID21 = product(close/open)-1 and ON21 = product(open/prev_close)-1 over the last 21 sessions. Long list = top decile by ID21; short list = bottom decile by ID21 (variant: sort on ON21, inverted). Direct test: buy the long list at the open, sell at the close; short the short list at the open, cover at the close. Practical: use the lists as a direction filter for other intraday strategies.",
+    "params": {
+      "lookback_days": 21,
+      "decile": 0.1,
+      "rebalance": "daily",
+      "sort_variable": "ID21",
+      "sort_variable_alternative": "ON21"
+    },
+    "instruments": "NSE cash equities, intraday (MIS), long and short",
+    "holding_period": "open to close, repeated daily",
+    "data_needed": [
+      "daily_equity"
+    ],
+    "evidence": "strong_academic",
+    "india_evidence": false,
+    "reported_performance": "US 1993-2013, value-weighted deciles: past-month intraday winners minus losers earn +2.19% a month intraday (t=6.72) and -1.77% overnight; past-month overnight winners minus losers earn -3.24% a month intraday (t=-9.34). Nine other markets: +2.80% a month intraday continuation. Gross, at opening prints. India not in the sample.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Traded directly it needs about 21 round trips a month per name, 1.5-2.7% a month in charges, which consumes the gross spread. Usable as a direction filter.",
+    "sources": [
+      "https://personal.lse.ac.uk/polk/research/TugOfWar.pdf",
+      "https://www.angelone.in/pricing"
+    ]
+  },
+  {
+    "id": "intraday_stock_selection__high_volume_return_premium",
+    "name": "High-volume return premium (yesterday's volume shock)",
+    "family": "volume_shock",
+    "rule": "At the close flag stocks whose traded value today ranks in the top 5 of the last 50 sessions and |close-to-close return|<1.5%, price>=50. Next session: long-only watchlist; enter on a break of the 15-min opening-range high with RVOL5>=1; stop 0.5*ATR14; exit 15:10. Also measure plain open-to-close and close-to-close returns after the flag.",
+    "params": {
+      "window_days": 50,
+      "top_rank": 5,
+      "max_abs_return": 0.015,
+      "min_price": 50,
+      "or_minutes": 15,
+      "rvol_min": 1.0,
+      "stop_atr_mult": 0.5,
+      "exit_time": "15:10"
+    },
+    "instruments": "NSE cash equities, long only (MIS)",
+    "holding_period": "intraday; source effect is 1 to 20 days",
+    "data_needed": [
+      "daily_equity",
+      "intraday"
+    ],
+    "evidence": "strong_academic",
+    "india_evidence": false,
+    "reported_performance": "NYSE Aug 1963-Dec 1996: high-minus-low volume portfolios earned 0.35% (1 day) to 0.94% (20 days) per dollar long in small stocks and 0.12% to 0.50% in large stocks; stronger when the volume shock came without an extreme return.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "The one-day large-stock effect (0.12%, close to close, pre-1997) is smaller than a round trip on a Rs 50,000 position. Useful as a watchlist input, not a standalone trade.",
+    "sources": [
+      "https://rodneywhitecenter.wharton.upenn.edu/wp-content/uploads/2014/04/9901.pdf",
+      "https://www.angelone.in/pricing"
+    ]
+  },
+  {
+    "id": "intraday_stock_selection__delivery_volume_change",
+    "name": "Delivery-volume change from the previous day",
+    "family": "delivery_volume",
+    "rule": "DQ = deliverable quantity, DP = DQ/traded quantity. Accumulation flag: DQ>=2*mean(DQ,20) and DP>=mean(DP,20)+10 points and return>=+1%: next-day long watchlist. Distribution: same with return<=-1%: short watchlist. Froth: return>=+3% and DP<=mean(DP,20)-10 points: next-day fade. Enter on a 15-min opening-range break in the watchlist direction; stop 0.5*ATR14; exit 15:10.",
+    "params": {
+      "dq_mult": 2.0,
+      "lookback_days": 20,
+      "dp_points": 10,
+      "accum_return_min": 0.01,
+      "froth_return_min": 0.03,
+      "or_minutes": 15,
+      "stop_atr_mult": 0.5,
+      "exit_time": "15:10"
+    },
+    "instruments": "NSE cash equities, intraday (MIS), long and short",
+    "holding_period": "intraday on the day after the flag",
+    "data_needed": [
+      "daily_equity",
+      "intraday",
+      "other"
+    ],
+    "evidence": "anecdotal",
+    "india_evidence": true,
+    "reported_performance": "No trading test found. Capitalmind, which publishes the data, says it is not very useful to trade on by itself; its January 2016 tables are descriptive. Small Granger-causality studies on a handful of NSE stocks give mixed results (2008-2018). Delivery percentage rises before NSE bulk deals (2010-2019).",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Selection uses a free daily exchange file (deliverable quantity; must confirm we hold it) and trades go through cash MIS. Evidence is the weak point, not the account size.",
+    "sources": [
+      "https://premium.capitalmind.in/2016/02/delivery-shockers-the-january-2016-edition/",
+      "https://studentlive.iimcal.ac.in/sites/all/files/pdfs/wp_863.pdf"
+    ]
+  },
+  {
+    "id": "intraday_stock_selection__futures_oi_price_quadrant",
+    "name": "Futures open-interest change with price change",
+    "family": "open_interest",
+    "rule": "From the daily F&O file sum stock-futures OI over all expiries. dOI = OI/OI_prev-1; dP = futures close/prev-1. Long build-up: dP>=+1% and dOI>=+5%: next-day long watchlist. Short build-up: dP<=-1% and dOI>=+5%: short watchlist. Test short covering (dP up, dOI<=-5%) and long unwinding separately. Enter on a 15-min opening-range break; exit 15:10. Skip the last 3 sessions before expiry.",
+    "params": {
+      "doi_min": 0.05,
+      "doi_alternatives": [
+        0.03,
+        0.1
+      ],
+      "dp_min": 0.01,
+      "or_minutes": 15,
+      "stop_atr_mult": 0.5,
+      "skip_days_before_expiry": 3,
+      "exit_time": "15:10"
+    },
+    "instruments": "NSE cash equities of F&O underlyings, intraday (MIS), long and short",
+    "holding_period": "intraday on the day after the signal",
+    "data_needed": [
+      "daily_fo",
+      "daily_equity",
+      "intraday"
+    ],
+    "evidence": "practitioner_only",
+    "india_evidence": false,
+    "reported_performance": "No test of next-day returns found for NSE stock futures. Broker and scanner sites publish the four labels daily without follow-up returns; the academic work located studies volatility, not direction (NSE 2005-2012).",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Signals come from the free daily F&O file; trades are in cash, so futures lot sizes and margins do not matter.",
+    "sources": [
+      "https://www.sahi.com/blogs/open-interest-change-in-oi-nse-guide",
+      "https://www.angelone.in/announcements/market/position-limits-for-stocks-in-ban-period-for-fo-segment-w-e-f-december-8-2025",
+      "https://www.kotakneo.com/bulletins/sebi-new-f-o-rules-explained-delta-based-oi-new-mwpl-what-it-means-for-your-trading/"
+    ]
+  },
+  {
+    "id": "intraday_stock_selection__daily_top_movers_next_day",
+    "name": "Yesterday's top gainers and losers: reversal versus continuation",
+    "family": "short_term_reversal",
+    "rule": "At the close rank the universe by close-to-close return; G = top 5, L = bottom 5. Next session test (a) reversal: short G and buy L at the open, exit 15:10; (b) continuation: the opposite; (c) enter only on a 15-min opening-range break in the tested direction. Report splits by volume shock, results day and next-morning gap direction.",
+    "params": {
+      "n_each_side": 5,
+      "n_each_side_small_account": 2,
+      "or_minutes": 15,
+      "exit_time": "15:10",
+      "min_price": 50,
+      "min_avg_traded_value_cr": 5
+    },
+    "instruments": "NSE cash equities, intraday (MIS), long and short",
+    "holding_period": "open to 15:10 next day",
+    "data_needed": [
+      "daily_equity",
+      "intraday"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "NSE 500, 2014-2021: the daily timescale shows the strongest reversal, a reversal portfolio made a 16-fold gross profit (abstract; costs not mentioned). US 1963-2015: stocks that were both top-80 daily winners and losers returned -1.07% the next month versus +0.53% for stocks that were neither. Monthly horizon in India shows continuation.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Ten positions of Rs 15,000 pay the 0.27% flat-fee floor each; cut to 2 per side. Intraday shorts are allowed in cash MIS. Published Indian result is before costs and assumes daily turnover.",
+    "sources": [
+      "https://arxiv.org/abs/2302.13245",
+      "https://www.cxoadvisory.com/technical-trading/short-the-biggest-daily-movers/",
+      "https://publishingindia.com/archive/ijfm/prior-return-effect-in-indian-stock-market-an-intra-day-analysis",
+      "https://www.angelone.in/pricing"
+    ]
+  },
+  {
+    "id": "intraday_stock_selection__results_day_and_day_after",
+    "name": "Results day and the day after",
+    "family": "event_catalyst",
+    "rule": "Day0 = first session a result is tradable. Pre-market result: apply the relative-volume opening-range rule to result stocks. Intraday result: when 5-min volume>5x its 20-day same-slot mean, enter in the bar's direction on a break of its extreme, stop at the other end. Day+1: trade Day0's direction only if Day0 closed in the top or bottom quarter of its range, entering on a 15-min opening-range break. Exit 15:10.",
+    "params": {
+      "intraday_volume_mult": 5,
+      "slot_lookback_days": 20,
+      "close_location_quartile": 0.25,
+      "or_minutes": 15,
+      "exit_time": "15:10",
+      "max_positions": 2
+    },
+    "instruments": "NSE cash equities, intraday (MIS), long and short",
+    "holding_period": "intraday on Day 0 and Day +1",
+    "data_needed": [
+      "events",
+      "intraday",
+      "daily_equity"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "No intraday test found. India drift evidence conflicts: significant post-earnings drift 2002-2017 in one study; no exploitable drift in 100 NSE firms 2014-2018 in another. US 1984 study: price reacts within minutes, rule profits gone in 5-10 minutes, volatility stays elevated into the next day.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Trades are ordinary cash MIS positions. The constraint is data: we hold no results calendar with announcement times.",
+    "sources": [
+      "https://www.alexandria.unisg.ch/server/api/core/bitstreams/3c2989c4-688d-4d78-8a71-f02690990d51/content"
+    ]
+  },
+  {
+    "id": "intraday_stock_selection__fifty_two_week_high_proximity",
+    "name": "52-week high proximity and breakout day",
+    "family": "price_anchor",
+    "rule": "near = close/max(high, 252 days). Watchlist: near>=0.97. Buy when price trades above the prior 252-day high and cumulative volume to that minute>=1.5x its 20-day same-minute mean. Stop 0.5*ATR14. Exit 15:10. Long only. Separate test: the day after a new 252-day low, buy on a break of the 15-min opening-range high.",
+    "params": {
+      "lookback_days": 252,
+      "near_min": 0.97,
+      "volume_mult": 1.5,
+      "volume_lookback_days": 20,
+      "stop_atr_mult": 0.5,
+      "exit_time": "15:10",
+      "max_positions": 2
+    },
+    "instruments": "NSE cash equities, long only (MIS)",
+    "holding_period": "intraday from trigger",
+    "data_needed": [
+      "daily_equity",
+      "intraday"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": false,
+    "reported_performance": "US 1982-2006 (2,000 stocks): volume spikes when price crosses a 52-week extreme; next-week abnormal return about 0.6% after highs and about 5% after lows in the smallest quarter of stocks. 52-week-high momentum is profitable in 18 of 20 markets but not significant after costs in most. Weekly to monthly effects; no intraday evidence.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "One or two long cash MIS positions. The documented effect is multi-day and concentrated in small stocks, so intraday benefit in the top 200 is doubtful.",
+    "sources": [
+      "https://www.cxoadvisory.com/technical-trading/trading-after-52-week-highs-and-lows/"
+    ]
+  },
+  {
+    "id": "intraday_stock_selection__fo_ban_mwpl_state",
+    "name": "F&O ban entry, exit and MWPL utilisation",
+    "family": "derivatives_positioning",
+    "rule": "U = aggregate F&O open interest/MWPL from the exchange daily file. States: approaching (0.85<=U<0.95), ban day 1, in ban, exit day. (a) Exclude ban and approaching stocks from long strategies. (b) Ban day 1: short on a break of the 15-min opening-range low in cash. (c) Exit day: buy on a break of the 15-min range high. Stop 0.5*ATR14. Exit 15:10.",
+    "params": {
+      "approach_min": 0.85,
+      "ban_enter": 0.95,
+      "ban_exit": 0.8,
+      "or_minutes": 15,
+      "stop_atr_mult": 0.5,
+      "exit_time": "15:10",
+      "regime_break_date": "2025-12-08"
+    },
+    "instruments": "NSE cash equities of banned or near-ban F&O stocks, intraday (MIS)",
+    "holding_period": "intraday",
+    "data_needed": [
+      "other",
+      "daily_fo",
+      "intraday"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "NSE ban stocks Jan 2018-Sep 2022 (79 companies): average holding-period return over the ban was negative in the COVID and post-COVID periods; futures overnight volatility rose during bans. No trading rule tested. Forum anecdotes claim a rise after ban exit.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "Cash intraday only; new futures or options positions in a banned stock are not allowed anyway. Needs the historical ban and MWPL file, and rules changed on 8 Dec 2025 (delta-based OI, new limit formula).",
+    "sources": [
+      "https://www.uowoajournals.org/aabfj/article/id/1750/",
+      "https://tradingqna.com/t/what-is-the-effect-of-f-o-ban-on-stock-price/30610",
+      "https://www.angelone.in/announcements/market/position-limits-for-stocks-in-ban-period-for-fo-segment-w-e-f-december-8-2025",
+      "https://www.kotakneo.com/bulletins/sebi-new-f-o-rules-explained-delta-based-oi-new-mwpl-what-it-means-for-your-trading/"
+    ]
+  },
+  {
+    "id": "intraday_stock_selection__price_band_proximity",
+    "name": "Price-band proximity",
+    "family": "market_microstructure",
+    "rule": "Risk rule: for fixed-band stocks never short intraday within 2% of the upper band nor hold longs within 2% of the lower band; for F&O stocks treat a 9.9% move as a 15-minute halt and keep stop prices inside the current band. Test on daily data: after a close at the upper (lower) band, measure next-day open-to-close and close-to-close returns.",
+    "params": {
+      "band_buffer": 0.02,
+      "fo_initial_band": 0.1,
+      "fo_flex_steps": [
+        0.05,
+        0.05,
+        0.03,
+        0.03,
+        0.02
+      ],
+      "cooling_off_minutes": [
+        15,
+        15,
+        30,
+        30,
+        60
+      ]
+    },
+    "instruments": "risk rule for NSE cash equities; daily test on fixed-band stocks",
+    "holding_period": "not applicable (risk rule); daily test 1 day",
+    "data_needed": [
+      "daily_equity",
+      "other"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "NSE (2017 paper, abstract): cumulative abnormal returns of stocks hitting the upper band keep rising after the event day and volume stays high for 5 days; size not available. Magnet-effect evidence abroad is mixed.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Fixed-band stocks are illiquid and a locked circuit can trap the whole account in one position; our 200 liquid names are mostly F&O stocks with flexing bands, so this is mainly a safety rule.",
+    "sources": [
+      "https://icmai-rnj.in/index.php/rb/article/view/117598",
+      "https://zerodha.com/z-connect/business-updates/explainer-on-new-price-band-rules-for-stocks-trading-in-the-fo-segment"
+    ]
+  },
+  {
+    "id": "intraday_stock_selection__bulk_block_deal_catalyst",
+    "name": "Bulk and block deal catalyst",
+    "family": "event_catalyst",
+    "rule": "Each evening read the exchange bulk and block deal file. Buy-only deals in stocks with minute data: next-day long watchlist, enter on a break of the 15-min opening-range high with RVOL5>=1.5, stop 0.5*ATR14, exit 15:10. Pre-deal signature test: 3-day rising volume and delivery percentage with positive abnormal return in mid caps.",
+    "params": {
+      "or_minutes": 15,
+      "rvol_min": 1.5,
+      "stop_atr_mult": 0.5,
+      "signature_days": 3,
+      "exit_time": "15:10"
+    },
+    "instruments": "NSE cash equities, long only (MIS)",
+    "holding_period": "intraday on the day after the deal",
+    "data_needed": [
+      "events",
+      "daily_equity",
+      "intraday",
+      "other"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "NSE bulk deals 2010-2019: about 5-7% within a week around the deal for those positioned before it; volume and delivery percentage rise significantly before deals. The gain is pre-disclosure; nothing is shown for entries after the deal is published.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Most bulk-deal names are mid and small caps outside our 200-stock minute-data set, and the documented profit precedes public disclosure.",
+    "sources": [
+      "https://studentlive.iimcal.ac.in/sites/all/files/pdfs/wp_863.pdf"
+    ]
+  },
+  {
+    "id": "intraday_stock_selection__pre_open_auction_signal",
+    "name": "Pre-open auction gap and volume ranking",
+    "family": "market_microstructure",
+    "rule": "At 09:08 read the pre-open indicative price and matched quantity per stock. gap_pre = indicative price/prev_close-1; pvol = matched quantity/20-day mean pre-open quantity. Rank by pvol and |gap_pre| to pre-select stocks for opening-range strategies. Proxy with held data: gap from the 09:15 open and first 1-minute volume relative to its 14-day mean.",
+    "params": {
+      "snapshot_time": "09:08",
+      "pvol_lookback_days": 20,
+      "proxy_first_bar_minutes": 1,
+      "proxy_lookback_days": 14
+    },
+    "instruments": "ranking input for NSE cash equities",
+    "holding_period": "not applicable (ranking input)",
+    "data_needed": [
+      "other",
+      "intraday",
+      "daily_equity"
+    ],
+    "evidence": "anecdotal",
+    "india_evidence": false,
+    "reported_performance": "No predictive test found. The one study opened (India, auction introduced 18 Oct 2010) finds no significant effect of the auction on market quality.",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Costs nothing to trade on, but we hold no pre-open snapshots; they would have to be recorded going forward. Only the proxy is testable now.",
+    "sources": [
+      "https://econpapers.repec.org/RePEc:taf:oaefxx:doi:10.1080/23322039.2014.944668"
+    ]
+  },
+  {
+    "id": "intraday_stock_selection__intraday_top_movers_fixed_time",
+    "name": "Intraday top movers at a fixed time: continuation versus reversal",
+    "family": "short_term_reversal",
+    "rule": "At T rank the universe by return since prev_close; M_up = top 5, M_down = bottom 5. Test (a) continuation to 15:10; (b) reversal over the next 30 and 60 minutes; (c) continuation only if cumulative volume>=2x its 14-day same-time mean; (d) reversal only if below 1x. Stop 0.5*ATR14.",
+    "params": {
+      "signal_times": [
+        "10:00",
+        "11:00",
+        "13:00",
+        "14:30"
+      ],
+      "n_each_side": 5,
+      "n_each_side_small_account": 2,
+      "rvol_high": 2.0,
+      "rvol_low": 1.0,
+      "reversal_horizons_min": [
+        30,
+        60
+      ],
+      "stop_atr_mult": 0.5,
+      "exit_time": "15:10"
+    },
+    "instruments": "NSE cash equities, intraday (MIS), long and short",
+    "holding_period": "30 to 60 minutes, or to 15:10",
+    "data_needed": [
+      "intraday",
+      "daily_equity"
+    ],
+    "evidence": "some_academic",
+    "india_evidence": true,
+    "reported_performance": "No direct test. India (2015, abstract): returns reverse within minutes of extreme intraday moves, faster after falls. US: short-term reversal lasts under an hour and is tied to liquidity imbalance; index returns continue into the close; high opening volume favours continuation (2016-2023).",
+    "feasible_at_150k": "marginal",
+    "feasibility_reason": "Short holding periods and up to ten small positions put the 0.13-0.27% round trip against moves of similar size; run with 2 per side at most.",
+    "sources": [
+      "https://publishingindia.com/archive/ijfm/prior-return-effect-in-indian-stock-market-an-intra-day-analysis",
+      "https://arxiv.org/abs/1005.3535",
+      "https://econpapers.repec.org/RePEc:eee:jfinec:v:129:y:2018:i:2:p:394-414",
+      "https://www.alexandria.unisg.ch/server/api/core/bitstreams/3c2989c4-688d-4d78-8a71-f02690990d51/content"
+    ]
+  },
+  {
+    "id": "intraday_stock_selection__per_stock_strategy_fitness",
+    "name": "Per-stock strategy fitness (walk-forward)",
+    "family": "meta_selection",
+    "rule": "For a base intraday strategy keep the per-stock trailing sum of R over the last 120 sessions (min 15 trades). Monthly, trade only stocks in the top third by this score. Validate walk-forward: compare next-month results of the top third versus the bottom third; drop the filter if the out-of-sample spread is not positive.",
+    "params": {
+      "lookback_sessions": 120,
+      "min_trades": 15,
+      "top_fraction": 0.33,
+      "rebalance": "monthly"
+    },
+    "instruments": "filter applied to NSE cash equities",
+    "holding_period": "not applicable (filter)",
+    "data_needed": [
+      "intraday"
+    ],
+    "evidence": "anecdotal",
+    "india_evidence": true,
+    "reported_performance": "In-sample only. US 2016-2023: best names for the 5-minute breakout made +309R to +385R (DDD, FSLR, NVDA), worst -128R to -154R, with no persistence test. NIFTY 50 paper (2024): per-stock rules work for some stocks, not all. No out-of-sample evidence that fitness persists.",
+    "feasible_at_150k": "yes",
+    "feasibility_reason": "A filter; no extra cost. High risk of fitting noise with under five years of minute data.",
+    "sources": [
+      "https://www.alexandria.unisg.ch/server/api/core/bitstreams/3c2989c4-688d-4d78-8a71-f02690990d51/content",
+      "https://arxiv.org/abs/2405.13959",
+      "https://www.quantconnect.com/research/18444/opening-range-breakout-for-stocks-in-play/"
+    ]
+  }
+]

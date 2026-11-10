@@ -34,6 +34,38 @@ DAILY_2012 = DAILY_HEADER + (
 )
 
 
+# Head of MA210212.csv (the first market-activity report on the archive) and
+# of MA230320.csv, real rows, trimmed.
+MA_2012 = (
+    ",21-FEB-2012\n"
+    "The Nifty witnessed an intraday movement of about 59.75 points.The closing index was 0.77 % up as compared to the previous closing index.\n"
+    "\n"
+    ", Traded Value (Rs. In Crores), 15879.53\n"
+    "\n"
+    ",INDEX,PREVIOUS CLOSE,OPEN,HIGH,LOW,CLOSE,GAIN/LOSS\n"
+    ",S&P CNX Nifty,      5564.30,      5561.90,      5621.50,      5561.75,      5607.15,42.85\n"
+    ",BANK Nifty,     11074.90,     11042.60,     11207.05,     11042.60,     11170.40,95.5\n"
+    ",India VIX,        24.18,        24.18,        27.18,        24.18,        26.25,2.07\n"
+    ",CNX AUTO,      4277.95,      4280.85,      4311.75,      4267.45,      4290.45,12.5\n"
+    "\n"
+    ",ADVANCES,904\n"
+    "\n"
+    ",TOP 25 Securities Today :\n"
+    ",SYMBOL,SERIES,PREV. CLOSE,CLOSE PRICE,%VAR, VALUE(Rs Crs)\n"
+    ",RELIANCE,EQ,       818.20,       843.55,3.1,693.73\n"
+)
+MA_2020 = (
+    ",23-Mar-2020\n"
+    "The Nifty witnessed an intraday movement of about 575.65 points.\n"
+    "\n"
+    ",INDEX,PREVIOUS CLOSE,OPEN,HIGH,LOW,CLOSE,GAIN/LOSS\n"
+    ",Nifty 50,      8745.45,      7945.70,      8159.25,      7583.60,      7610.25,-1135.2\n"
+    ",India VIX,67.1000,67.1000,73.3675,66.3175,71.9850,4.8850\n"
+    "\n"
+    ",ADVANCES,105\n"
+)
+
+
 # ---------------------------------------------------------------- names
 
 def test_canon_maps_every_historical_name_to_the_official_one():
@@ -137,6 +169,29 @@ def test_parse_daily_csv_rejects_other_content():
 def test_daily_url_and_cache_path(tmp_path):
     assert ix.DAILY_URL.format(d=date(2020, 3, 23)).endswith("/content/indices/ind_close_all_23032020.csv")
     assert ix.daily_path(tmp_path, date(2020, 3, 23)) == tmp_path / "daily" / "2020" / "ind_close_all_23032020.csv"
+    assert ix.MA_URL.format(d=date(2012, 2, 21)).endswith("/archives/equities/mkt/MA210212.csv")
+    assert ix.ma_path(tmp_path, date(2012, 2, 21)) == tmp_path / "ma" / "2012" / "MA210212.csv.gz"
+
+
+# ---------------------------------------------------------------- market-activity report
+
+def test_parse_ma_csv_reads_only_the_index_table():
+    df = ix.parse_ma_csv(MA_2012)
+    assert list(df["raw_name"]) == ["S&P CNX Nifty", "BANK Nifty", "India VIX", "CNX AUTO"]   # not RELIANCE
+    assert (df["date"] == pd.Timestamp("2012-02-21")).all()
+    v = df.set_index("name").loc["INDIA VIX"]
+    assert (v["open"], v["high"], v["low"], v["close"]) == (24.18, 27.18, 24.18, 26.25)
+    assert df.set_index("name").loc["NIFTY 50", "close"] == 5607.15
+
+
+def test_parse_ma_csv_later_layout_and_rejects_other_content():
+    v = ix.parse_ma_csv(MA_2020).set_index("name").loc["INDIA VIX"]
+    assert v["date"] == pd.Timestamp("2020-03-23")
+    assert (v["open"], v["high"], v["low"], v["close"]) == (67.1, 73.3675, 66.3175, 71.985)
+    with pytest.raises(ValueError):
+        ix.parse_ma_csv("<!DOCTYPE html><html><title>Error 404</title></html>")
+    with pytest.raises(ValueError):
+        ix.parse_ma_csv(",23-Mar-2020\nno table here\n")
 
 
 # ---------------------------------------------------------------- niftyindices
@@ -306,23 +361,27 @@ def test_assemble_layout_calendar_and_sources():
     assert "INDIA VIX" not in wide["tri"]
     m = meta["indices"]
     assert m["NIFTY 50"]["fields"]["close"] == {"first": "2020-03-20", "last": "2020-03-24", "n": 3,
-                                                "n_niftyindices": 3, "n_daily_file": 0, "source": "niftyindices"}
-    assert m["NIFTY 1D RATE INDEX"]["fields"]["close"]["source"] == "niftyindices+daily_file"
+                                                "n_niftyindices": 3, "source": "niftyindices"}
+    assert m["NIFTY 1D RATE INDEX"]["fields"]["close"] == {
+        "first": "2020-03-20", "last": "2020-03-24", "n": 3, "n_niftyindices": 2, "n_daily_file": 1,
+        "source": "niftyindices+daily_file"}
     assert m["NIFTY 1D RATE INDEX"]["fields"]["tri"]["source"].startswith("copy of close")
     assert m["NIFTY BANK"]["fields"]["close"]["source"] == "daily_file"
     assert m["NIFTY BANK"]["category"].startswith("not listed")
     assert m["NIFTY 50"]["daily_file_names"] == ["Nifty 50"]
     assert meta["shapes"]["close"] == [3, close.shape[1]]
     # the two sources agree on the one day both have
-    assert meta["source_agreement"]["close"]["cells_compared"] == 1
-    assert meta["source_agreement"]["close"]["cells_differ"] == 0
+    ag = meta["source_agreement"]["niftyindices_vs_daily_file"]["close"]
+    assert ag["cells_compared"] == 1 and ag["cells_differ"] == 0
+    assert meta["source_agreement"]["ma_report_vs_others"] == {}
+    assert meta["odd_moves"] == []
 
 
 def test_assemble_reports_disagreement_between_sources():
     ni, daily, cats = _fixture_sources()
     ni["price"]["NIFTY 50"].loc[pd.Timestamp("2020-03-23"), "close"] = 7700.0
     wide, meta = ix.assemble(ni, daily, cats, date(2020, 1, 1), date(2020, 12, 31))
-    ag = meta["source_agreement"]["close"]
+    ag = meta["source_agreement"]["niftyindices_vs_daily_file"]["close"]
     assert ag["cells_differ"] == 1 and ag["worst"]["NIFTY 50"]["max_abs"] == pytest.approx(89.75)
     assert wide["close"]["NIFTY 50"].iloc[1] == pytest.approx(7700.0)          # primary source is kept
 
@@ -332,6 +391,76 @@ def test_assemble_clips_to_the_requested_range():
     wide, meta = ix.assemble(ni, daily, cats, date(2020, 3, 21), date(2020, 3, 23))
     assert list(wide["close"].index) == [pd.Timestamp("2020-03-23")]
     assert meta["calendar"]["first"] == meta["calendar"]["last"] == "2020-03-23"
+
+
+def test_assemble_takes_india_vix_from_the_market_activity_report_only_where_missing():
+    ni, daily, cats = _fixture_sources()
+    ma = pd.concat([ix.parse_ma_csv(MA_2020),                                   # the 23rd: niftyindices has it
+                    ix.parse_ma_csv(MA_2020.replace("23-Mar-2020", "24-Mar-2020")
+                                    .replace("71.9850", "70.3925"))])            # the 24th: nobody else has it
+    wide, meta = ix.assemble(ni, daily, cats, date(2020, 1, 1), date(2020, 12, 31), ma)
+    vix = wide["close"]["INDIA VIX"]
+    assert np.isnan(vix.iloc[0]) and vix.iloc[1] == pytest.approx(71.99) and vix.iloc[2] == pytest.approx(70.3925)
+    assert wide["high"]["INDIA VIX"].iloc[2] == pytest.approx(73.3675)
+    f = meta["indices"]["INDIA VIX"]["fields"]["close"]
+    assert f["source"] == "niftyindices+ma_report" and f["n_niftyindices"] == 1 and f["n_ma_report"] == 1
+    ag = meta["source_agreement"]["ma_report_vs_others"]["close"]
+    assert ag["cells_compared"] == 1 and ag["cells_differ"] == 0           # 71.985 against 71.99: rounding only
+    assert "NIFTY 50" in wide["close"] and wide["close"]["NIFTY 50"].iloc[1] == pytest.approx(7610.25)
+    assert meta["indices"]["NIFTY 50"]["fields"]["close"]["source"] == "niftyindices"   # the report's other rows are ignored
+
+
+def test_vix_days_asks_for_missing_days_and_a_short_overlap():
+    ni, daily, _ = _fixture_sources()
+    need, check = ix.vix_days(ni, daily, date(2020, 1, 1), date(2020, 12, 31), overlap=5)
+    assert need == [date(2020, 3, 20), date(2020, 3, 24)] and check == [date(2020, 3, 23)]
+    assert ix.vix_days(ni, daily, date(2020, 1, 1), date(2020, 3, 20))[0] == [date(2020, 3, 20)]
+    # nothing before the first report on the archive
+    early = {"price": {"NIFTY 50": pd.DataFrame({"close": [5500.0, 5600.0]},
+                                                index=[pd.Timestamp("2012-02-17"), pd.Timestamp("2012-02-21")])}}
+    assert ix.vix_days(early, daily.iloc[:0], date(2012, 1, 1), date(2012, 12, 31)) == ([date(2012, 2, 21)], [])
+
+
+def test_clean_blanks_impossible_values_and_reports_them():
+    d = _dates("2004-05-26", "2004-05-27", "2004-05-28")
+    w = {"close": pd.DataFrame({"NIFTY IT": [2124.15, 2126.42, 2011.25], "NIFTY50 DIVIDEND POINTS": [0.0, 0.0, 1.5],
+                                "X": [100.0, 0.0, 101.0]}, index=d),
+         "low": pd.DataFrame({"NIFTY IT": [21111.6, 20982.85, 1989.1], "X": [99.0, 99.0, 0.0]}, index=d),
+         "pe": pd.DataFrame({"X": [20.0, 0.0, -3.0]}, index=d),
+         "dy": pd.DataFrame({"X": [0.0, 1.0, 1.2]}, index=d)}
+    dropped = ix.clean(w)
+    assert dropped == {"non_positive": {"low": {"X": 1}, "close": {"X": 1}, "pe": {"X": 2}},
+                       "off_scale": {"low": {"NIFTY IT": 2}}}
+    assert w["low"]["NIFTY IT"].isna().tolist() == [True, True, False]       # ten times the close: dropped
+    assert w["close"]["NIFTY50 DIVIDEND POINTS"].tolist() == [0.0, 0.0, 1.5]  # zero is real here
+    assert w["close"]["X"].isna().tolist() == [False, True, False]
+    assert w["dy"]["X"].tolist() == [0.0, 1.0, 1.2]                           # a zero yield is real
+    assert w["close"]["NIFTY IT"].notna().all()
+
+
+def test_tri_spikes_flags_isolated_bad_prints_but_not_dividend_steps():
+    d = pd.date_range("2009-05-01", periods=30, freq="B", name="date")
+    price = pd.Series(np.linspace(2000, 2600, 30), index=d)
+    ratio = pd.Series(1.0776, index=d)
+    ratio.iloc[12:14] = 0.83            # two bad total-return prints in a row (NIFTY SMALLCAP 100, May 2009)
+    ratio.iloc[20:] = 1.0776 * 1.03     # a 3% special dividend: steps up and stays up
+    step_only = pd.Series(1.05, index=d)
+    step_only.iloc[27:] = 1.05 * 1.04   # a step three days before the data ends is not a spike either
+    close = pd.DataFrame({"A": price, "B": price, "C": price})
+    tri = pd.DataFrame({"A": price * ratio, "B": price * step_only})
+    bad = ix.tri_spikes(tri, close)
+    assert list(bad.columns) == ["A", "B"]
+    assert bad["A"].to_numpy().nonzero()[0].tolist() == [12, 13]
+    assert not bad["B"].any()
+
+
+def test_odd_moves_lists_moves_far_from_the_market():
+    d = _dates("2006-11-17", "2006-11-20", "2006-11-21", "2006-11-22")
+    close = pd.DataFrame({"NIFTY 500": [3200.6, 3191.3, 3244.65, 3273.55],
+                          "NIFTY METAL": [1721.02, 1688.92, 2222.61, 2262.51],
+                          "NIFTY BANK": [5000.0, 4990.0, 5080.0, 5120.0]}, index=d)
+    assert ix.odd_moves(close, ["NIFTY METAL", "NIFTY BANK", "NIFTY 500", "ABSENT"]) == [
+        {"index": "NIFTY METAL", "date": "2006-11-21", "move": 0.316, "market": 0.0167}]
 
 
 # ---------------------------------------------------------------- holdout guard
@@ -358,13 +487,14 @@ class FakeResponse:
 
 class FakeSession:
     """Answers GET for daily files and POST for niftyindices from dicts; counts calls."""
-    def __init__(self, daily=None, ni=None):
-        self.daily, self.ni, self.calls = daily or {}, ni or {}, []
+    def __init__(self, daily=None, ni=None, ma=None):
+        self.daily, self.ni, self.ma, self.calls = daily or {}, ni or {}, ma or {}, []
 
     def get(self, url, **kw):
         self.calls.append(url)
-        key = url.rsplit("_", 1)[1][:8]
-        return FakeResponse(200, self.daily[key].encode()) if key in self.daily else FakeResponse(404, b"<html>404</html>")
+        name = url.rsplit("/", 1)[1]
+        files, key = (self.ma, name[2:8]) if name.startswith("MA") else (self.daily, name.rsplit("_", 1)[1][:8])
+        return FakeResponse(200, files[key].encode()) if key in files else FakeResponse(404, b"<html>404</html>")
 
     def post(self, url, data=None, **kw):
         self.calls.append(url)
@@ -408,6 +538,25 @@ def test_fetch_daily_rejects_an_error_page_served_with_status_200(tmp_path, fake
     with pytest.raises(RuntimeError, match="unexpected body"):
         ix.fetch_daily(tmp_path, date(2020, 3, 23))
     assert not ix.daily_path(tmp_path, date(2020, 3, 23)).exists()
+
+
+def test_download_ma_and_read_back_india_vix(tmp_path, fake):
+    fake.ma = {"230320": MA_2020}
+    days = [date(2020, 3, 23), date(2020, 3, 24), date(2012, 2, 20)]          # the last one predates the archive
+    st = ix.download_ma(tmp_path, days, log=lambda *_: None)
+    assert (st["days"], st["requested"], st["ok"], st["absent"], st["failed"]) == (2, 2, 1, 1, [])
+    assert gzip.decompress(ix.ma_path(tmp_path, date(2020, 3, 23)).read_bytes()).decode() == MA_2020
+    n = len(fake.calls)
+    assert ix.download_ma(tmp_path, days, log=lambda *_: None)["requested"] == 0 and len(fake.calls) == n
+    long, problems = ix.read_ma(tmp_path, days)
+    assert problems == [] and list(long["name"]) == ["INDIA VIX"] and long["close"].iloc[0] == 71.985
+
+
+def test_fetch_ma_rejects_an_error_page(tmp_path, fake):
+    fake.ma = {"230320": "<html>Access Denied</html>"}
+    with pytest.raises(RuntimeError, match="unexpected body"):
+        ix.fetch_ma(tmp_path, date(2020, 3, 23))
+    assert not ix.ma_path(tmp_path, date(2020, 3, 23)).exists()
 
 
 def test_read_daily_flags_a_file_holding_another_days_rows(tmp_path):
@@ -459,12 +608,15 @@ def test_build_offline_and_load_through_store(tmp_path, fake, monkeypatch):
     (raw / "niftyindices").mkdir(parents=True)
     (raw / "niftyindices" / "catalogue.json").write_text(json.dumps(cat))
     fake.daily = {"23032020": DAILY_2020}
+    fake.ma = {"230320": MA_2020, "240320": MA_2020.replace("23-Mar-2020", "24-Mar-2020")}
     fake.ni = {("getHistoricaldatatabletoString", "NIFTY 50"): NI_PRICE,
                ("getTotalReturnIndexString", "NIFTY 50"): NI_TRI,
                ("getpepbHistoricaldataDBtoString", "NIFTY 50"): NI_PEPB}
     meta = ix.build(date(2020, 3, 1), date(2020, 3, 31), root=tmp_path, log=lambda *_: None)
     assert meta["download"]["niftyindices_failed"] == [] and meta["download"]["daily"]["files"] == 1
     assert meta["download"]["trading_days_without_daily_file"] == ["2020-03-24"]
+    assert meta["download"]["ma"]["files"] == 2 and meta["download"]["ma_problems"] == []
+    assert meta["indices"]["INDIA VIX"]["fields"]["close"]["source"] == "ma_report"
 
     n = len(fake.calls)                                    # a second, offline build makes no request at all
     ix.build(date(2020, 3, 1), date(2020, 3, 31), root=tmp_path, offline=True, log=lambda *_: None)
@@ -481,9 +633,11 @@ def test_build_offline_and_load_through_store(tmp_path, fake, monkeypatch):
     assert store.load_index("tri", root=tmp_path).empty or "NIFTY 50" in store.load_index("tri", root=tmp_path)
     on_disk = json.loads((tmp_path / "index" / "meta.json").read_text())
     assert on_disk["indices"]["NIFTY 50"]["fields"]["close"]["last"] == "2020-03-24"
-    assert set(on_disk["sources"]) == {"niftyindices", "daily_file"}
+    assert set(on_disk["sources"]) == {"niftyindices", "daily_file", "ma_report"}
+    assert store.load_index("close", root=tmp_path)["INDIA VIX"].tolist() == pytest.approx([71.985, 71.985])
 
     res = {r["check"]: r for r in ix.validate(tmp_path, log=lambda *_: None)}
     assert res["NIFTY 50 close on well-known dates"]["pass"]                      # 2020-03-23 = 7610.25
-    assert res["no row after the requested end / holdout lock"]["pass"]
+    assert res["no row after the requested end or the holdout lock"]["pass"]
+    assert res["every download succeeded"]["pass"]
     assert not res["every requested index is present in close"]["pass"]           # the fixture has two indices

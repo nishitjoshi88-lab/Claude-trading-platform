@@ -52,10 +52,11 @@ UA = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 KEEP_SERIES = ("EQ", "BE", "BZ")
+_RE_SYMBOL = r"-RE\d?$"
 SERIES_RANK = {"EQ": 0, "BE": 1, "BZ": 2}
 MAX_WORKERS = 6
 PR_FIRST_DATE = dt.date(2010, 1, 1)      # the PR press bundle does not exist before 2010
-CA_API_FIRST_DATE = dt.date(2005, 1, 1)  # the corporate-action feed is empty before 2005
+CA_API_FIRST_DATE = dt.date(2003, 1, 1)  # the corporate-action feed is almost empty before mid-2005
 
 
 # --------------------------------------------------------------------------
@@ -380,6 +381,11 @@ def parse_bhav(data: bytes, date=None) -> pd.DataFrame:
     raw["SYMBOL"] = raw["SYMBOL"].str.strip()
     raw["SERIES"] = raw["SERIES"].str.strip()
     raw = raw[raw["SERIES"].isin(KEEP_SERIES) & raw["SYMBOL"].notna() & (raw["SYMBOL"] != "")]
+    # rights entitlements trade for a fortnight in the BE series (SYMBOL-RE, ISIN type 20): not shares
+    is_re = raw["SYMBOL"].str.contains(_RE_SYMBOL, regex=True)
+    if "ISIN" in raw.columns:
+        is_re |= raw["ISIN"].fillna("").str.strip().str[7:9].eq("20")
+    raw = raw[~is_re]
     out = pd.DataFrame({
         "symbol": raw["SYMBOL"].to_numpy(),
         "series": raw["SERIES"].to_numpy(),
@@ -447,32 +453,41 @@ def parse_bc(data: bytes) -> pd.DataFrame:
 
 _KEY_RE = re.compile(
     r"DIVIDEND|DIVIDENT|DIVD|DIV|DVD|INTERIM|FINAL|FIN|SPECIAL|SPL(?!I?T)|"          # dividend family
-    r"PREMIUM|PREM|SPLIT|SPLT|SUB-?\s?DIVISION|FACE\s?VALUE|FV|RIGHTS?|RGHTS|BUY\s?-?BACK|"
-    r"CONSOLIDATION|CONSOL|BONUS|REDEMPTION|REDUCTION|INTEREST|DISTRIBUTION|RETURN OF CAPITAL|"
-    r"CAPITAL|WARRANT|CONVERSION|DEBENTURE|NCD|PAR\b")
+    r"PREMIUM|PREM|PRM|SPLIT|SPLT|SUB-?\s?DIVISION|FACE\s?VALUE|FV|RIGHTS?|RIGTHS|RIGTS|RGTS|RHTS?|"
+    r"BUY\s?-?BACK|CONSOLIDATION|CONSOL|BONUS|BON\b|REDEMPTION|REDUCTION|INTEREST|DISTRIBUTION|DIST|"
+    r"RETURN OF CAPITAL|CAPITAL|WARRANT|CONVERSION|DEBENTURE|NCD|PAR\b")
 _DIV_KEYS = ("DIVIDEND", "DIVIDENT", "DIVD", "DIV", "DVD", "INTERIM", "FINAL", "FIN", "SPECIAL", "SPL")
 _NUM = r"(\d+(?:\.\d+)?)"
 _RATIO = r"(\d+(?:\.\d+)?)\s*:\s*(\d+(?:\.\d+)?)"
-_BONUS_RE = re.compile(r"BONUS(?P<mid>[^0-9]{0,24})" + _RATIO + r"(?P<tail>[^/]{0,24})")
+_BONUS_RE = re.compile(r"\bBON(?:US)?(?P<mid>[^0-9]{0,24})" + _RATIO + r"(?P<tail>[^/]{0,24})")
 _SPLIT_RE = re.compile(
-    r"(?:SPLIT|SPLT|SUB-?\s?DIVISION|SUBDIVISION)[^0-9]{0,32}" + _NUM + r"[^0-9]{1,24}?TO[^0-9]{0,12}" + _NUM)
-_CONSOL_RE = re.compile(r"CONSOL[A-Z]*[^0-9]{0,32}" + _NUM + r"[^0-9]{1,24}?TO[^0-9]{0,12}" + _NUM)
-_RIGHTS_RE = re.compile(r"(?:RIGHTS?|RGHTS)(?P<mid>[^0-9]{0,24})" + _RATIO)
-_PREM_RE = re.compile(r"PREM(?:IUM)?[^0-9]{0,12}" + _NUM)
+    r"(?:SPLIT|SPLT|SPTL|SUB-?\s?DIV(?:ISION)?|SUBDIVISION|\bSPL|\bFVS\b)[^0-9%]{0,32}" + _NUM
+    + r"[^0-9%]{0,24}?TO[^0-9%]{0,12}" + _NUM)
+_SPLIT_DASH_RE = re.compile(r"\bSPL(?:IT)?[^0-9%]{0,6}RS " + _NUM + r"\s*-\s*RS " + _NUM)   # SPL RS10-RS2
+_CONSOL_RE = re.compile(r"CONSOL[A-Z]*[^0-9%]{0,32}" + _NUM + r"[^0-9%]{0,24}?TO[^0-9%]{0,12}" + _NUM)
+_RIGHTS_RE = re.compile(r"\bR(?:IGHTS?|IGTHS|IGTS|GTS|HTS?)(?P<mid>[^0-9]{0,24})" + _RATIO)
+_PREM_RE = re.compile(r"PRE?M(?:IUM)?[^0-9]{0,12}" + _NUM)
 _PAR_RE = re.compile(r"(?:@|AT)\s*PAR\b")
 _AMT_RE = re.compile(r"(?P<rs>(?:RS|INR)\s*)?(?P<n>\d+(?:\.\d+)?)(?P<tail>\s*(?:%|PER\s*CENT|"
-                     r"(?:PER|PR|P|/)\s*\.?\s*(?:EQ(?:UITY)?\s*)?(?:SHARE|SHR|SH|UNIT)))?")
-_NOT_EQUITY = ("DEB", "PREF", "NCD", "NCRPS", "CCPS", "RPS", "WARRANT", "BOND")
-_SCHEME_WORDS = ("SCHEME OF ARR", "ARRANGEMENT", "DEMERGER", "DE-MERGER", "SPIN OFF", "SPIN-OFF",
-                 "REDUCTION OF CAPITAL", "CAPITAL REDUCTION", "REDUCTION IN CAPITAL", "RESTRUCTUR")
+                     r"(?:PER|PR|P|/)\s*\.?\s*(?:EQ(?:UITY)?\s*)?(?:SHARE|SHR|SH|S\b|UNIT)))?")
+_NOT_EQUITY = ("DEB", "PREF", "NCD", "NCRPS", "CCPS", "PCCPS", "RPS", "WARRANT", "WRNT", "WAR ", "BOND",
+               "DVR", "PCD", "FCD", "CCD", "ZCCB")
+_SCHEME_WORDS = ("SCHEME", "SCHM", "SCH OF", "SCH-", "SCH AG", "ARRANGEMENT", "ARANGEMENT", "ARGMT",
+                 "ARRNGMT", "DEMERG", "DE-MERGER", "MERGER", "AMALGAMATION", "SPIN OFF", "SPIN-OFF",
+                 "REDUCTION", "CAP RED", "RESTRUCTUR")
 
 
 def _norm_purpose(text: str) -> str:
     t = (text or "").upper().replace("/-", " ")
-    t = re.sub(r"\bR[SE]\b\.?", "RS ", t)          # RS. / RE. / RS / RE  -> RS
-    t = re.sub(r"\bR[SE]\.?(?=\d)", "RS ", t)      # RS10 / RE1          -> RS 10
+    t = re.sub(r"\bR[SE]\b\.?", "RS ", t)                 # RS. / RE. / RS / RE  -> RS
+    t = re.sub(r"(?<![A-Z])R[SE]\.?(?=\d)", "RS ", t)     # RS10 / RE1          -> RS 10
+    t = re.sub(r"(?<=\d)TOR[SE]\.?\s*(?=\d)", " TO RS ", t)   # RS10TORE1 -> RS 10 TO RS 1
     t = re.sub(r"\s+", " ", t)
     return t.strip()
+
+
+def _blank(t: str, m) -> str:
+    return t[:m.start()] + " " * (m.end() - m.start()) + t[m.end():]
 
 
 def parse_purpose(text: str) -> dict:
@@ -493,44 +508,53 @@ def parse_purpose(text: str) -> dict:
     out: dict = {}
     if not t:
         return out
+    rest_text = t          # what is left for the cash-amount scan
 
     m = _BONUS_RE.search(t)
-    if m and not any(w in m.group("mid") + m.group("tail") for w in _NOT_EQUITY):
-        a, b = float(m.group(2)), float(m.group(3))
-        if a > 0 and b > 0:
-            out["bonus"] = (a, b)
+    if m:
+        if not any(w in m.group("mid") + m.group("tail") for w in _NOT_EQUITY):
+            a, b = float(m.group(2)), float(m.group(3))
+            if a > 0 and b > 0:
+                out["bonus"] = (a, b)
+        rest_text = _blank(rest_text, m)
 
     m = _CONSOL_RE.search(t)
     if m:
         old, new = float(m.group(1)), float(m.group(2))
         if 0 < old < new:
             out["consol"] = (old, new)
+        rest_text = _blank(rest_text, m)
     else:
-        m = _SPLIT_RE.search(t)
+        m = _SPLIT_RE.search(t) or _SPLIT_DASH_RE.search(t)
         if m:
             old, new = float(m.group(1)), float(m.group(2))
             if old > new > 0:
                 out["split"] = (old, new)
-            elif 0 < old < new and "SPLIT" not in t:
-                out["consol"] = (old, new)
+            rest_text = _blank(rest_text, m)
 
     m = _RIGHTS_RE.search(t)
-    if m and not any(w in m.group("mid") for w in _NOT_EQUITY):
-        a, b = float(m.group(2)), float(m.group(3))
-        rest = t[m.end():]
-        if a > 0 and b > 0 and not any(w in rest[:30] for w in ("DEB", "PREF", "NCD", "WARRANT", "BOND")):
-            pm = _PREM_RE.search(rest)
-            out["rights"] = (a, b, float(pm.group(1)) if pm else None, bool(_PAR_RE.search(rest)) and not pm)
+    if m:
+        tail = t[m.end():]
+        if not any(w in m.group("mid") + tail[:30] for w in _NOT_EQUITY):
+            a, b = float(m.group(2)), float(m.group(3))
+            if a > 0 and b > 0:
+                pm = _PREM_RE.search(tail)
+                out["rights"] = (a, b, float(pm.group(1)) if pm else None,
+                                 bool(_PAR_RE.search(tail)) and not pm)
+        stop = t.find("/", m.end())                 # the rights clause runs to the next "/"
+        stop = len(t) if stop < 0 else stop
+        rest_text = rest_text[:m.start()] + " " * (stop - m.start()) + rest_text[stop:]
 
     if any(w in t for w in _SCHEME_WORDS):
         out["scheme"] = True
 
     # cash amounts: every number that is marked as rupees / per share / percent,
     # counted as dividend only if the nearest keyword before it is a dividend word
-    keys = [(k.start(), k.group(0)) for k in _KEY_RE.finditer(t)]
+    t2 = rest_text
+    keys = [(k.start(), k.group(0)) for k in _KEY_RE.finditer(t2)]
     rs = pct = 0.0
     got_rs = got_pct = False
-    for a in _AMT_RE.finditer(t):
+    for a in _AMT_RE.finditer(t2):
         tail = (a.group("tail") or "").strip()
         is_pct = tail.startswith("%") or tail.startswith("PER C")
         is_rs = bool(a.group("rs")) or (tail != "" and not is_pct)
@@ -591,7 +615,7 @@ def _cache_fresh(sig_path: Path, pq_path: Path, sig: dict) -> bool:
 def parse_bhav_year(year: int, days: list[dt.date], root=None) -> pd.DataFrame:
     """All bhavcopies of one year as a long frame, cached under raw/cm/parsed."""
     pq, sigp = _year_cache("bhav", year, root)
-    sig = {"v": 3, "days": [d.isoformat() for d in days]}
+    sig = {"v": 4, "days": [d.isoformat() for d in days]}
     if _cache_fresh(sigp, pq, sig):
         return pd.read_parquet(pq)
     parts = []
@@ -777,15 +801,32 @@ class _DSU:
             self.p[max(ra, rb)] = min(ra, rb)
 
 
-def build_segments(sym_dates: dict, changes: pd.DataFrame, extra_cuts: dict | None = None,
+def isin_links(long: pd.DataFrame) -> list[tuple]:
+    """Pairs (symbol A, A's last date, symbol B, B's first date) where one
+    ISIN stopped trading as A and later traded as B: the same security under
+    a new symbol. Catches renames that the exchange list misses or misdates."""
+    d = long[long["isin"].notna()]
+    if d.empty:
+        return []
+    u = (d.groupby(["isin", "symbol"], observed=True)["date"].agg(["min", "max"]).reset_index()
+           .sort_values(["isin", "min"]))
+    out = []
+    for _, g in u[u.groupby("isin")["symbol"].transform("size") > 1].groupby("isin"):
+        rows = list(g.itertuples(index=False))
+        for x, y in zip(rows[:-1], rows[1:]):
+            if x.max < y.min and x.symbol != y.symbol:
+                out.append((x.symbol, np.datetime64(x.max, "D"), y.symbol, np.datetime64(y.min, "D")))
+    return out
+
+
+def build_segments(sym_dates: dict, changes: pd.DataFrame, links: list | None = None,
                    max_link_lag_days: int = 730) -> pd.DataFrame:
     """Split every raw symbol's history into segments and join the segments
     that belong to one company.
 
     sym_dates   raw symbol -> sorted array of trade dates (datetime64)
     changes     exchange symbol changes (old, new, date), already clipped
-    extra_cuts  raw symbol -> dates at which a *different* company starts
-                using the symbol (evidence from ISIN issuer codes)
+    links       extra joins from `isin_links`
 
     A symbol is cut at the date it was renamed away (rows on or after that
     date are someone else re-using the name) and at the date it was renamed
@@ -794,33 +835,23 @@ def build_segments(sym_dates: dict, changes: pd.DataFrame, extra_cuts: dict | No
     the first segment of `new` on or after it.
 
     Returns one row per segment: symbol, start, end, entity, name. `name` is
-    the last symbol the company traded under; when two companies end up with
-    the same name the one that traded last keeps it and the earlier one is
-    renamed NAME~YYYY (YYYY = its last trading year).
+    the last symbol of the company (a rename that took effect after its last
+    trade is still applied); when two companies end up with the same name
+    the one that traded last keeps it and the earlier one becomes NAME~YYYY
+    (YYYY = its last trading year).
     """
-    extra_cuts = extra_cuts or {}
+    sym_dates = {s: np.asarray(d, dtype="datetime64[D]") for s, d in sym_dates.items() if len(d)}
     cuts: dict[str, set] = {}
     for r in changes.itertuples(index=False):
         d = np.datetime64(r.date, "D")
         for s in (r.old, r.new):
             dates = sym_dates.get(s)
-            if dates is not None and len(dates) and dates[0] < d <= dates[-1]:
-                cuts.setdefault(s, set()).add(d)
-    for s, ds in extra_cuts.items():
-        dates = sym_dates.get(s)
-        if dates is None:
-            continue
-        for d in ds:
-            d = np.datetime64(d, "D")
-            if dates[0] < d <= dates[-1]:
+            if dates is not None and dates[0] < d <= dates[-1]:
                 cuts.setdefault(s, set()).add(d)
 
     seg_sym, seg_start, seg_end = [], [], []
     seg_index: dict[str, list[int]] = {}
     for s, dates in sym_dates.items():
-        dates = np.asarray(dates, dtype="datetime64[D]")
-        if not len(dates):
-            continue
         bounds = [0]
         for c in sorted(cuts.get(s, ())):
             i = int(np.searchsorted(dates, c, side="left"))
@@ -832,6 +863,12 @@ def build_segments(sym_dates: dict, changes: pd.DataFrame, extra_cuts: dict | No
             seg_sym.append(s)
             seg_start.append(dates[a])
             seg_end.append(dates[b - 1])
+
+    def seg_at(sym, d):
+        for i in seg_index.get(sym, ()):
+            if seg_start[i] <= d <= seg_end[i]:
+                return i
+        return None
 
     dsu = _DSU(len(seg_sym))
     unlinked = []
@@ -846,16 +883,39 @@ def build_segments(sym_dates: dict, changes: pd.DataFrame, extra_cuts: dict | No
             unlinked.append((r.old, r.new, str(d)))
             continue
         dsu.union(o, n)
+    n_isin = 0
+    for a_sym, a_last, b_sym, b_first in links or ():
+        o, n = seg_at(a_sym, a_last), seg_at(b_sym, b_first)
+        if o is not None and n is not None and dsu.find(o) != dsu.find(n):
+            dsu.union(o, n)
+            n_isin += 1
 
     seg = pd.DataFrame({"symbol": seg_sym,
                         "start": np.array(seg_start, dtype="datetime64[D]"),
                         "end": np.array(seg_end, dtype="datetime64[D]")})
     seg["entity"] = [dsu.find(i) for i in range(len(seg))]
     last = seg.sort_values("end").groupby("entity").tail(1).set_index("entity")
-    ent = pd.DataFrame({"name": last["symbol"], "last": last["end"]})
+    ent = pd.DataFrame({"name": last["symbol"].astype(object), "last": last["end"]})
+
+    # renames effective after the company's last trade (new symbol never traded yet)
+    pending = {}
+    for r in changes.itertuples(index=False):
+        pending.setdefault(r.old, []).append((np.datetime64(r.date, "D"), r.new))
+    for e in ent.index:
+        nm, lastd = ent.at[e, "name"], np.datetime64(ent.at[e, "last"], "D")
+        for _ in range(8):
+            nxt = [(d, n) for d, n in pending.get(nm, ()) if d > lastd]
+            if not nxt:
+                break
+            d, n = min(nxt)
+            dates = sym_dates.get(n)
+            if dates is not None and (dates >= d).any():
+                break                      # that symbol trades as somebody else
+            nm, lastd = n, d
+        ent.at[e, "name"] = nm
+
     ent = ent.sort_values(["name", "last"])
-    # the company that traded last keeps the plain name
-    is_last = ~ent.duplicated("name", keep="last")
+    is_last = ~ent.duplicated("name", keep="last")      # the company that traded last keeps the name
     names = ent["name"].where(is_last, ent["name"] + "~" + ent["last"].dt.year.astype(str))
     used, final = set(names[is_last]), {}
     for e, nm in names.items():
@@ -870,6 +930,7 @@ def build_segments(sym_dates: dict, changes: pd.DataFrame, extra_cuts: dict | No
         final[e] = nm
     seg["name"] = seg["entity"].map(final)
     seg.attrs["unlinked"] = unlinked
+    seg.attrs["isin_links_used"] = n_isin
     return seg.sort_values(["symbol", "start"]).reset_index(drop=True)
 
 
@@ -894,6 +955,351 @@ def assign_names(long: pd.DataFrame, seg: pd.DataFrame) -> pd.Series:
     if out.isna().any():
         raise RuntimeError("rows left without an entity name")
     return out.astype(str)
+
+
+# --------------------------------------------------------------------------
+# adjustment events
+# --------------------------------------------------------------------------
+
+# Businesses that carried on under a new symbol without an exchange symbol
+# change (the exchange treated the successor as a new listing). old raw
+# symbol -> new raw symbol. The join is adjusted like a scheme of arrangement
+# (see `resolve_events`).
+MANUAL_LINKS = (
+    # Larsen & Toubro, 2004: the cement business stayed in the old company
+    # (now UltraTech Cement); engineering moved to a new company that took
+    # the L&T name and listed as LT on 2004-06-23. Holders of the old share
+    # received new LT shares plus UltraTech shares.
+    ("L&T", "LT"),
+)
+
+# Ratios a plain bonus or face-value split produces most often; an
+# undeclared overnight gap is snapped to one of these only when it is within
+# SNAP_TOL of it, otherwise the gap itself is used.
+COMMON_RATIOS = (1 / 2, 1 / 3, 2 / 3, 1 / 4, 3 / 4, 1 / 5, 2 / 5, 3 / 5, 1 / 10)
+SNAP_TOL = 0.03
+INFER_DOWN = 0.79          # an undeclared overnight ratio at or below this is a capital change
+INFER_UP = 1.27            # ... or at or above this (consolidation, capital reduction)
+INFER_MAX_GAP_DAYS = 10    # only inferred when the stock traded within this many days before
+SCHEME_DOWN, SCHEME_UP = 0.90, 1.25
+REVIEW_MOVE = 0.35         # adjusted overnight moves beyond this are listed for review
+
+# Hand-checked overrides, keyed by (panel name, first trade date on or after the ex-date).
+#   MANUAL_EVENTS: factor to apply (replaces whatever the feeds or the gap scan say)
+#   MANUAL_REAL:   the move is a real price move (or a data quirk left as is): no adjustment
+# Every entry carries the reason it is there.
+MANUAL_EVENTS: dict[tuple[str, str], tuple[float, str]] = {}
+MANUAL_REAL: dict[tuple[str, str], str] = {}
+
+
+def _kind_factor(kind: str, a: float, b: float) -> float:
+    if kind == "bonus":
+        return bonus_factor(a, b)
+    return split_factor(a, b)          # split and consol: new face value / old face value
+
+
+def declared_events(ca: pd.DataFrame) -> pd.DataFrame:
+    """Exchange records -> one row per (name, ex_date, kind) candidate.
+
+    `ca` must carry a `name` column (panel name of the company). Kinds:
+    bonus, split, consol (with a, b), rights (a, b, premium, at_par), scheme.
+    Dividend amounts are returned on the same rows (div_rs, div_pct).
+    """
+    rows = []
+    for r in ca.itertuples(index=False):
+        d = parse_purpose(r.purpose)
+        base = dict(name=r.name, ex_date=r.ex_date, source=r.source, purpose=r.purpose,
+                    face_value=r.face_value, isin=r.isin)
+        for kind in ("bonus", "split", "consol"):
+            if kind in d:
+                rows.append(dict(base, kind=kind, a=d[kind][0], b=d[kind][1]))
+        if "rights" in d:
+            a, b, prem, par = d["rights"]
+            rows.append(dict(base, kind="rights", a=a, b=b, premium=prem, at_par=par))
+        if d.get("scheme"):
+            rows.append(dict(base, kind="scheme"))
+        if "div_rs" in d or "div_pct" in d:
+            rows.append(dict(base, kind="div", div_rs=d.get("div_rs", np.nan), div_pct=d.get("div_pct", np.nan)))
+    cols = ["name", "ex_date", "kind", "a", "b", "premium", "at_par", "div_rs", "div_pct",
+            "face_value", "isin", "source", "purpose"]
+    out = pd.DataFrame(rows, columns=cols)
+    return out
+
+
+def map_ca_names(ca: pd.DataFrame, seg: pd.DataFrame, long: pd.DataFrame,
+                 max_days: int = 400) -> pd.Series:
+    """Panel name of the company each corporate-action record refers to.
+
+    Press-bundle records carry the symbol in use when the bundle was
+    published, so the raw-symbol segment nearest to the ex-date decides.
+    Feed records carry the company's present symbol: the panel name is tried
+    first (and rejected when the record's ISIN issuer contradicts the
+    company's), then the raw symbol, then the ISIN issuer on its own.
+    Records that cannot be placed get NaN.
+    """
+    by_sym: dict[str, list] = {}
+    for r in seg.itertuples(index=False):
+        by_sym.setdefault(r.symbol, []).append((np.datetime64(r.start, "D"), np.datetime64(r.end, "D"), r.name))
+    span = seg.groupby("name").agg(first=("start", "min"), last=("end", "max"))
+    first = {n: np.datetime64(v, "D") for n, v in span["first"].items()}
+    last = {n: np.datetime64(v, "D") for n, v in span["last"].items()}
+    iss = long.loc[long["isin"].notna(), ["name", "isin"]].drop_duplicates()
+    iss = iss.assign(issuer=iss["isin"].str[:7])
+    issuers_of = iss.groupby("name")["issuer"].agg(set).to_dict()
+    names_of: dict[str, set] = {}
+    for n, ss in issuers_of.items():
+        for x in ss:
+            names_of.setdefault(x, set()).add(n)
+    tol = np.timedelta64(max_days, "D")
+
+    def by_raw(sym, d):
+        best, bd = None, None
+        for st, en, nm in by_sym.get(sym, ()):
+            dist = max(st - d, d - en, np.timedelta64(0, "D"))
+            if bd is None or dist < bd:
+                best, bd = nm, dist
+        return best if bd is not None and bd <= tol else None
+
+    out = []
+    for r in ca.itertuples(index=False):
+        d = np.datetime64(r.ex_date, "D")
+        if r.source != "api":
+            out.append(by_raw(r.symbol, d))
+            continue
+        issuer = isin_issuer(r.isin)
+        nm = None
+        if r.symbol in first and first[r.symbol] - tol <= d <= last[r.symbol] + tol:
+            known = issuers_of.get(r.symbol)
+            if not (issuer and known and issuer not in known):
+                nm = r.symbol
+        if nm is None:
+            c = by_raw(r.symbol, d)
+            if c is not None:
+                known = issuers_of.get(c)
+                if not (issuer and known and issuer not in known):
+                    nm = c
+        if nm is None and issuer:
+            c = [n for n in names_of.get(issuer, ()) if first[n] - tol <= d <= last[n] + tol]
+            if len(c) == 1:
+                nm = c[0]
+        out.append(nm)
+    return pd.Series(out, index=ca.index, dtype=object)
+
+
+class Prices:
+    """Raw daily rows of every company, sorted by (name, date), with the
+    overnight ratio (open over previous close; close over previous close
+    where the open is not given)."""
+
+    def __init__(self, long: pd.DataFrame):
+        long = long.sort_values(["name", "date"], kind="stable").reset_index(drop=True)
+        self.long = long
+        self.name = long["name"].to_numpy(dtype=object)
+        self.date = long["date"].to_numpy(dtype="datetime64[D]")
+        self.open = long["open"].to_numpy(dtype="float64")
+        self.close = long["close"].to_numpy(dtype="float64")
+        uniq, first = np.unique(self.name, return_index=True)
+        self.span = {n: (int(i), int(j)) for n, i, j in zip(uniq, first, np.r_[first[1:], len(self.name)])}
+        n = len(long)
+        is_first = np.ones(n, dtype=bool)
+        is_first[1:] = self.name[1:] != self.name[:-1]
+        prev_close = np.r_[np.nan, self.close[:-1]]
+        prev_close[is_first] = np.nan
+        prev_date = np.r_[self.date[:1], self.date[:-1]]
+        self.prev_close = prev_close
+        self.gap_days = (self.date - prev_date).astype("int64").astype("float64")
+        self.gap_days[is_first] = np.nan
+        ref = np.where(self.open > 0, self.open, self.close)
+        self.ref = ref
+        with np.errstate(divide="ignore", invalid="ignore"):
+            self.g = ref / prev_close
+
+    def locate(self, name: str, date) -> int | None:
+        """Row index of the first trade on or after `date` that has a trade before it."""
+        sp = self.span.get(name)
+        if sp is None:
+            return None
+        a, b = sp
+        i = a + int(np.searchsorted(self.date[a:b], np.datetime64(date, "D"), side="left"))
+        if i <= a or i >= b:
+            return None
+        return i
+
+
+def resolve_events(px: Prices, decl: pd.DataFrame, fv_of: dict | None = None,
+                   manual_events: dict | None = None, manual_real: dict | None = None,
+                   infer: bool = True):
+    """Decide the adjustment factor events.
+
+    Returns (events, notes). `events` has one row per (name, date): the first
+    trade date on or after the ex-date, the factor that multiplies every
+    earlier price, the method and the evidence. Methods:
+
+      declared            split / bonus / consolidation published by the exchange
+                          and matching the overnight price ratio
+      declared_shifted    same, but the gap sits up to 5 sessions from the published date
+      declared_unverified published, too small to check against prices (|factor-1| <= ~20%)
+      rights              published rights issue; factor = theoretical ex-rights price
+                          over the cum-rights close
+      scheme_gap          published scheme of arrangement / demerger / capital reduction
+                          with an overnight ratio <= 0.90 or >= 1.25; factor = that ratio
+      price_snap          no usable record; overnight ratio within 3% of a common
+                          split/bonus ratio; factor = that ratio
+      price_gap           no usable record and no common ratio; factor = the overnight ratio
+      link_gap            join of a manual symbol link; factor = the ratio across the join
+      manual              hand-checked override
+
+    `notes` lists published records that were not applied and why.
+    """
+    fv_of = fv_of or {}
+    manual_events = MANUAL_EVENTS if manual_events is None else manual_events
+    manual_real = MANUAL_REAL if manual_real is None else manual_real
+    ev: dict[tuple[str, int], dict] = {}
+    notes = []
+
+    adj = decl[decl["kind"].isin(["bonus", "split", "consol", "rights", "scheme"])]
+    for (name, ex_date), grp in adj.groupby(["name", "ex_date"], sort=False):
+        i = px.locate(name, ex_date)
+        if i is None:
+            continue
+        cum, g, gap = px.prev_close[i], px.g[i], px.gap_days[i]
+        if not (cum > 0 and g > 0):
+            continue
+        sources = sorted(set(grp["source"]))
+        purposes = " | ".join(sorted(set(grp["purpose"])))[:200]
+        # --- split / bonus / consolidation: product over kinds, alternatives per kind
+        alts = [1.0]
+        kinds = []
+        for kind in ("bonus", "split", "consol"):
+            k = grp[grp["kind"] == kind]
+            if k.empty:
+                continue
+            kinds.append(kind)
+            vals = sorted({round(_kind_factor(kind, r.a, r.b), 9) for r in k.itertuples(index=False)})
+            alts = [x * v for x in alts for v in vals]
+        f_rights = 1.0
+        rk = grp[grp["kind"] == "rights"]
+        if not rk.empty:
+            best = None
+            for r in rk.itertuples(index=False):
+                fv = r.face_value if r.face_value == r.face_value else fv_of.get(name, np.nan)
+                if r.premium == r.premium and r.premium is not None:
+                    issue = r.premium + (fv if fv == fv else 0.0)
+                elif r.at_par and fv == fv:
+                    issue = fv
+                else:
+                    continue
+                # cum price on the basis the ratio refers to: undo a same-day split/bonus later
+                f = rights_factor(r.a, r.b, issue, cum)
+                if f is not None and (best is None or r.source == "api"):
+                    best = f
+            if best is not None and 0.3 <= best < 1.0:
+                f_rights = best
+                kinds.append("rights")
+            else:
+                notes.append(dict(name=name, ex_date=ex_date, why="rights not priced or not in the money",
+                                  purpose=purposes, g=g))
+        if kinds and kinds != ["rights"]:
+            tol = 0.20 if gap <= 5 else 0.40
+            f = min(alts, key=lambda x: abs(np.log(g / (x * f_rights)))) * f_rights
+            err = abs(np.log(g / f))
+            if err <= tol:
+                ev[(name, i)] = dict(factor=f, method="declared", kinds="+".join(kinds), g=g,
+                                     sources=",".join(sources), purpose=purposes)
+                continue
+            a, b = px.span[name]
+            best_j, best_err = None, 0.12
+            for j in range(max(a + 1, i - 5), min(b, i + 6)):
+                if j == i or not (px.g[j] > 0):
+                    continue
+                for x in alts:
+                    e = abs(np.log(px.g[j] / (x * f_rights)))
+                    if e <= best_err:
+                        best_j, best_err, f = j, e, x * f_rights
+            if best_j is not None:
+                ev[(name, best_j)] = dict(factor=f, method="declared_shifted", kinds="+".join(kinds),
+                                          g=px.g[best_j], sources=",".join(sources), purpose=purposes)
+                continue
+            f = min(alts, key=lambda x: abs(np.log(g / (x * f_rights)))) * f_rights
+            if abs(np.log(f)) < 0.224:
+                ev[(name, i)] = dict(factor=f, method="declared_unverified", kinds="+".join(kinds), g=g,
+                                     sources=",".join(sources), purpose=purposes)
+            else:
+                notes.append(dict(name=name, ex_date=ex_date, why="published factor %.4f not seen in prices" % f,
+                                  purpose=purposes, g=g))
+            continue
+        if kinds == ["rights"]:
+            ev[(name, i)] = dict(factor=f_rights, method="rights", kinds="rights", g=g,
+                                 sources=",".join(sources), purpose=purposes)
+            continue
+        if (grp["kind"] == "scheme").any() and gap <= 200 and (g <= SCHEME_DOWN or g >= SCHEME_UP):
+            ev[(name, i)] = dict(factor=g, method="scheme_gap", kinds="scheme", g=g,
+                                 sources=",".join(sources), purpose=purposes)
+
+    # --- manual symbol links: the join itself is the event
+    for old, new in MANUAL_LINKS:
+        pass   # handled by the caller through `link_rows`
+
+    # --- gaps with no usable record
+    if infer:
+        cand = np.flatnonzero(((px.g <= INFER_DOWN) | (px.g >= INFER_UP)) & (px.gap_days <= INFER_MAX_GAP_DAYS)
+                              & (px.prev_close >= 1.0))
+        for i in cand:
+            name = px.name[i]
+            if (name, int(i)) in ev:
+                continue
+            a, b = px.span[name]
+            # a published event within 5 sessions already explains a gap of this size?
+            near = [ev[(name, j)] for j in range(max(a, i - 5), min(b, i + 6)) if (name, j) in ev]
+            if any(abs(np.log(px.g[i] / e["factor"])) <= 0.25 and e["method"] != "declared_shifted" and False
+                   for e in near):
+                continue
+            g = px.g[i]
+            # the new level has to hold: same-day close and the next sessions
+            c0 = px.close[i] / (g * px.prev_close[i])
+            nxt = px.close[i + 1:min(b, i + 4)]
+            lvl = np.median(nxt) / px.ref[i] if len(nxt) else 1.0
+            if not (0.75 <= c0 <= 1.33 and 0.70 <= lvl <= 1.43):
+                continue
+            snap = [c for c in COMMON_RATIOS if abs(np.log(g / c)) <= SNAP_TOL]
+            if g < 1 and snap:
+                ev[(name, int(i))] = dict(factor=snap[0], method="price_snap", kinds="", g=g, sources="", purpose="")
+            else:
+                ev[(name, int(i))] = dict(factor=float(g), method="price_gap", kinds="", g=g, sources="", purpose="")
+
+    # --- overrides
+    for (name, d), why in manual_real.items():
+        i = px.locate(name, d)
+        if i is not None and px.date[i] == np.datetime64(d, "D"):
+            ev.pop((name, i), None)
+    for (name, d), (f, why) in manual_events.items():
+        i = px.locate(name, d)
+        if i is None or px.date[i] != np.datetime64(d, "D"):
+            notes.append(dict(name=name, ex_date=pd.Timestamp(d), why="manual event has no trade on that date",
+                              purpose=why, g=np.nan))
+            continue
+        ev[(name, i)] = dict(factor=float(f), method="manual", kinds="", g=px.g[i], sources="manual", purpose=why)
+
+    rows = [dict(name=k[0], date=px.date[k[1]], row=k[1], **v) for k, v in ev.items()]
+    events = pd.DataFrame(rows, columns=["name", "date", "row", "factor", "method", "kinds", "g", "sources", "purpose"])
+    events = events.sort_values(["name", "date"]).reset_index(drop=True)
+    return events, pd.DataFrame(notes, columns=["name", "ex_date", "why", "purpose", "g"])
+
+
+def factor_column(px: Prices, events: pd.DataFrame) -> np.ndarray:
+    """Per-row factor: product of the factors of all later events of the company."""
+    f = np.ones(len(px.name), dtype="float64")
+    if events.empty:
+        return f
+    for name, grp in events.groupby("name", sort=False):
+        a, b = px.span[name]
+        mult = np.ones(b - a, dtype="float64")
+        for r in grp.itertuples(index=False):
+            mult[r.row - a] *= r.factor          # applies to rows strictly before r.row
+        # factor[t] = product of mult[k] for k > t
+        rev = np.cumprod(mult[::-1])[::-1]
+        f[a:b - 1] = rev[1:]
+    return f
 
 
 def main(argv=None):

@@ -421,6 +421,182 @@ def parse_years(years, root=None, workers: int = 3, force: bool = False) -> list
         return list(ex.map(parse_year, years, [root] * len(years), [force] * len(years)))
 
 
+# --------------------------------------------------------------------------
+# Lot sizes derived from the files
+# --------------------------------------------------------------------------
+# Two facts pin the lot of a contract down exactly:
+#   1. open interest is printed in units of the underlying, so it is a whole
+#      multiple of the lot on every day;
+#   2. traded value brackets the lot (lot_bounds above).
+# The lot is the divisor of the open interest that lies inside the bracket.
+# Option rows give a strict, narrow bracket. Futures rows do not: calendar
+# spread trades count towards value at prices that can lie outside the day's
+# low-high range, which shifts the bracket by up to about 2%, so it is
+# widened by FUT_SLACK before use.
+FUT_SLACK = 0.03
+_NONE = np.empty(0, dtype=np.int64)
+
+
+def contract_days(rows: pd.DataFrame, bounds: pd.DataFrame) -> pd.DataFrame:
+    """One line per (symbol, expiry, date): g = greatest common divisor of the
+    open interest of the contract's rows (0 if none), [lo, hi] = the bracket
+    used for the lot (NaN on days without trades) and [slo, shi] = the same
+    bracket without slack."""
+    key = ["symbol", "expiry", "date"]
+    r = rows[key + ["oi"]].sort_values(key, kind="stable")
+    first = (r[key] != r[key].shift()).any(axis=1).to_numpy()
+    starts = np.flatnonzero(first)
+    out = r.loc[first, key].reset_index(drop=True)
+    out["g"] = np.gcd.reduceat(r["oi"].to_numpy(np.int64), starts) if len(r) else _NONE
+    b = bounds.pivot_table(index=key, columns="src", values=["lo", "hi"])
+    b.columns = [f"{v}_{s}" for v, s in b.columns]
+    for c in ("lo_F", "hi_F", "lo_O", "hi_O"):
+        if c not in b.columns:
+            b[c] = np.nan
+    out = out.merge(b.reset_index(), on=key, how="left")
+    opt = out["lo_O"] <= out["hi_O"]                    # option rows present and consistent
+    out["lo"] = np.where(opt, out["lo_O"], out["lo_F"] * (1 - FUT_SLACK))
+    out["hi"] = np.where(opt, out["hi_O"], out["hi_F"] * (1 + FUT_SLACK))
+    out["slo"] = np.where(opt, out["lo_O"], out["lo_F"])
+    out["shi"] = np.where(opt, out["hi_O"], out["hi_F"])
+    return out[key + ["g", "lo", "hi", "slo", "shi"]]
+
+
+def _candidates(g: int, lo: float, hi: float) -> np.ndarray:
+    a, b = max(1, int(np.ceil(lo))), int(np.floor(hi))
+    if b < a:
+        return _NONE
+    d = np.arange(a, b + 1, dtype=np.int64)
+    return d[g % d == 0]
+
+
+def _fits(c: np.ndarray, g: int, lo: float, hi: float) -> np.ndarray:
+    return c[(g % c == 0) & (c >= lo) & (c <= hi)]
+
+
+def lots_of_contract(g, lo, hi, slo, shi) -> np.ndarray:
+    """Lot per day of one contract (days in date order), NaN where the files
+    do not settle it. The lot is constant within a contract except across a
+    corporate action, so days are grouped into runs that share a candidate."""
+    n = len(g)
+    use = np.flatnonzero((g > 0) & ~np.isnan(lo) & (lo <= hi))   # days that carry evidence
+    runs = []                                            # [first day, last day, candidates]
+    cand, s, e = None, -1, -1
+    for i, t in enumerate(use):
+        if cand is not None:
+            keep = _fits(cand, g[t], lo[t], hi[t])
+            if keep.size == 0 and lo[t] == slo[t]:       # see the note on option brackets below
+                keep = cand[(cand >= slo[t]) & (cand <= shi[t])]
+                keep = keep if np.floor(shi[t]) == np.ceil(slo[t]) else _NONE
+            if keep.size:
+                cand, e = keep, t
+                continue
+            if i + 1 < len(use):                         # one odd day, or a new lot?
+                u = use[i + 1]
+                if _fits(cand, g[u], lo[u], hi[u]).size:
+                    continue                             # the old lot is back tomorrow: skip today
+        fresh = _candidates(g[t], lo[t], hi[t])
+        if fresh.size == 0 and lo[t] == slo[t]:
+            # Option bracket, but the open interest is no multiple of anything in
+            # it. That happens after an exchange-wide lot revision: positions
+            # opened under the old lot stay on the books in their old units.
+            # A strict bracket holding a single whole number is enough by itself.
+            a, b = int(np.ceil(slo[t])), int(np.floor(shi[t]))
+            if a == b:
+                fresh = np.array([a], dtype=np.int64)
+        if fresh.size == 0:
+            continue                                     # the day contradicts itself
+        if cand is not None:
+            runs.append((s, e, cand))
+        cand, s, e = fresh, t, t
+    if cand is not None:
+        runs.append((s, e, cand))
+
+    value = []                                           # the lot of each run, or NaN
+    for s, e, cand in runs:
+        if cand.size > 1:                                # prefer the one inside most strict brackets
+            days = use[(use >= s) & (use <= e)]
+            support = np.array([((slo[days] <= c) & (c <= shi[days])).sum() for c in cand])
+            cand = cand[support == support.max()]
+        value.append(float(cand[0]) if cand.size == 1 else np.nan)
+
+    lot = np.full(n, np.nan)
+    if not runs:
+        return lot
+    starts = np.array([r[0] for r in runs])
+    ends = np.array([r[1] for r in runs])
+    for t in range(n):
+        k = np.searchsorted(starts, t, side="right") - 1      # last run starting at or before t
+        if k >= 0 and t <= ends[k]:
+            lot[t] = value[k]
+            continue
+        a = value[k] if k >= 0 else None                      # run before t
+        b = value[k + 1] if k + 1 < len(runs) else None       # run after t
+        ok = [v for v in (a, b) if v is not None and not np.isnan(v)
+              and (g[t] == 0 or g[t] % int(v) == 0)]
+        if a is not None and b is not None:
+            if np.isnan(a) or np.isnan(b):
+                continue
+            if a == b:
+                lot[t] = a
+            elif g[t] > 0 and len(ok) == 1:                   # open interest fits only one of them
+                lot[t] = ok[0]
+        elif len(ok) == 1:
+            lot[t] = ok[0]
+    return lot
+
+
+def derive_lots(days: pd.DataFrame) -> pd.Series:
+    """Lot for every line of contract_days() output (same index)."""
+    d = days.sort_values(["symbol", "expiry", "date"], kind="stable")
+    g = d["g"].to_numpy(np.int64)
+    lo, hi = d["lo"].to_numpy(float), d["hi"].to_numpy(float)
+    slo, shi = d["slo"].to_numpy(float), d["shi"].to_numpy(float)
+    new = ((d["symbol"] != d["symbol"].shift()) | (d["expiry"] != d["expiry"].shift())).to_numpy()
+    edges = np.append(np.flatnonzero(new), len(d))
+    lot = np.full(len(d), np.nan)
+    for a, b in zip(edges[:-1], edges[1:]):
+        lot[a:b] = lots_of_contract(g[a:b], lo[a:b], hi[a:b], slo[a:b], shi[a:b])
+    d = d.assign(lot=lot)
+
+    # A corporate action changes the lot of every expiry of a symbol on the
+    # same day. Lines before a contract's first evidence (or after its last)
+    # were given that contract's nearest known lot; where a sibling expiry
+    # shows a change in between, that is not safe.
+    d["known"] = (d["g"] > 0) & d["lo"].notna() & d["lot"].notna()
+    grp = d.groupby(["symbol", "expiry"], sort=False)
+    prev = grp["lot"].shift()
+    changed = d["known"] & prev.notna() & (prev != d["lot"])
+    events = d.loc[changed, ["symbol", "date"]].drop_duplicates()
+    if len(events):
+        first = d[d["known"]].groupby(["symbol", "expiry"], sort=False)["date"].agg(["min", "max"])
+        d = d.join(first, on=["symbol", "expiry"])
+        for sym, when in events.groupby("symbol")["date"]:
+            m = d["symbol"] == sym
+            for e in when:
+                lead = m & (d["date"] < e) & (d["min"] >= e)
+                trail = m & (d["date"] >= e) & (d["max"] < e)
+                d.loc[lead | trail, "lot"] = np.nan
+        d = d.drop(columns=["min", "max"])
+
+    # Lines still open take the lot of the symbol's other expiries on that
+    # day, when those agree with each other and the line's own evidence backs
+    # them: its open interest is a multiple, or its value bracket contains it.
+    # With neither (no trade, no open interest) the peer lot is taken only if
+    # the contract has evidence on some other day; a contract that never
+    # traded and never had open interest stays NaN.
+    has = d.groupby(["symbol", "expiry"], sort=False)["known"].transform("any")
+    peers = d[d["lot"].notna()].groupby(["symbol", "date"])["lot"].agg(["min", "max"])
+    peers = peers[peers["min"] == peers["max"]]["min"].rename("peer")
+    d = d.join(peers, on=["symbol", "date"])
+    multiple = (d["g"] > 0) & (d["g"] % d["peer"].fillna(1).astype("int64") == 0)
+    inside = (d["lo"] <= d["peer"]) & (d["peer"] <= d["hi"])
+    silent = (d["g"] == 0) & d["lo"].isna() & has
+    take = d["lot"].isna() & d["peer"].notna() & (multiple | inside | silent)
+    d.loc[take, "lot"] = d.loc[take, "peer"]
+    return d["lot"].reindex(days.index)
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="python -m quant.data.nse_fo")
     sub = p.add_subparsers(dest="cmd", required=True)
